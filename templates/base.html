@@ -1,0 +1,110 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}MMU Clearance System{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/mmu.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  <!-- Utility Bar -->
+  <div class="utility-bar">
+    <div class="container">
+      <span>📞 +254-700-000-000 &nbsp;|&nbsp; ✉️ info@mmu.ac.ke &nbsp;|&nbsp; 🌐 www.mmu.ac.ke</span>
+      <a href="mailto:clearance@mmu.ac.ke" class="btn-contact">Contact Clearance Office</a>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar-mmu">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <img src="{% static 'images/mmu_logo.png' %}" alt="MMU Logo">
+        <div>
+          <div class="brand-text">Multimedia University</div>
+          <div class="brand-sub">Clearance System</div>
+        </div>
+      </a>
+
+      <ul class="navbar-nav" id="navLinks">
+        {% block nav_links %}{% endblock %}
+      </ul>
+
+      <div class="navbar-user" id="navUser" style="display:none">
+        <span class="notif-bell" id="notifBell" title="Notifications">
+          🔔 <span class="notif-count" id="notifCount" style="display:none">0</span>
+        </span>
+        <span class="user-name" id="navUserName"></span>
+        <button class="btn-logout" onclick="handleLogout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="grid-3">
+        <div>
+          <div class="footer-heading">About MMU</div>
+          <p>Multimedia University of Kenya is a public university chartered in 2013, offering technology-focused education.</p>
+        </div>
+        <div>
+          <div class="footer-heading">Quick Links</div>
+          <ul style="list-style:none;line-height:2">
+            <li><a href="/login/">Student Portal</a></li>
+            <li><a href="/staff/login/">Staff Portal</a></li>
+            <li><a href="https://www.mmu.ac.ke" target="_blank">University Website</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-heading">Contact</div>
+          <p>Off Magadi Road, Athi River<br>P.O. Box 15653 – 00503<br>Nairobi, Kenya</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; 2024 Multimedia University of Kenya. All rights reserved. &nbsp;|&nbsp;
+        Student Clearance System — Final Year Project by Victor Kimutai (CIT-222-044/2020)
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const API = '/api';
+
+    function getToken() { return localStorage.getItem('mmu_token'); }
+    function getUser()  { return JSON.parse(localStorage.getItem('mmu_user') || 'null'); }
+
+    async function handleLogout() {
+      const token = getToken();
+      if (token) {
+        await fetch(`${API}/auth/logout/`, {
+          method: 'POST',
+          headers: { 'Authorization': `Token ${token}` }
+        }).catch(() => {});
+      }
+      localStorage.removeItem('mmu_token');
+      localStorage.removeItem('mmu_user');
+      window.location.href = '/login/';
+    }
+
+    function initNavUser() {
+      const user = getUser();
+      if (user) {
+        document.getElementById('navUser').style.display = 'flex';
+        document.getElementById('navUserName').textContent = user.name || user.reg_number || user.staff_number;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initNavUser);
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

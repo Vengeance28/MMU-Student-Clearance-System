@@ -1,0 +1,303 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Clearance — MMU</title>
+  <link rel="stylesheet" href="{% static 'css/mmu.css' %}">
+</head>
+<body>
+
+<!-- Utility Bar -->
+<div class="utility-bar">
+  <div class="container">
+    <span>📞 +254-700-000-000 &nbsp;|&nbsp; ✉️ info@mmu.ac.ke</span>
+    <a href="mailto:clearance@mmu.ac.ke" class="btn-contact">Contact Clearance Office</a>
+  </div>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar-mmu">
+  <div class="container">
+    <a href="/dashboard/" class="navbar-brand">
+      <img src="{% static 'images/mmu_logo.png' %}" alt="MMU Logo">
+      <div>
+        <div class="brand-text">Multimedia University</div>
+        <div class="brand-sub">Clearance System</div>
+      </div>
+    </a>
+    <ul class="navbar-nav">
+      <li><a href="/dashboard/" class="active">Dashboard</a></li>
+      <li><a href="/certificate/" id="certLink" style="display:none">Certificate</a></li>
+    </ul>
+    <div class="navbar-user">
+      <span class="notif-bell" id="notifBell" title="Notifications" onclick="toggleNotifPanel()">
+        🔔 <span class="notif-count" id="notifCount" style="display:none">0</span>
+      </span>
+      <span class="user-name" id="navUserName"></span>
+      <button class="btn-logout" onclick="handleLogout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <h1 id="heroTitle">Welcome to MMU Clearance</h1>
+    <p id="heroSub">Track your clearance status in real time</p>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="container section" id="mainContent">
+  <div id="loadingState" style="text-align:center;padding:60px 0">
+    <div class="spinner" style="width:40px;height:40px;margin:0 auto 16px"></div>
+    <p style="color:#777">Loading your clearance status…</p>
+  </div>
+
+  <!-- No request state -->
+  <div id="noRequestState" style="display:none;text-align:center;padding:60px 0">
+    <div style="font-size:3rem;margin-bottom:16px">📋</div>
+    <h2 style="color:var(--mmu-navy);margin-bottom:10px">No Clearance Request Yet</h2>
+    <p style="color:#777;margin-bottom:24px">Submit your clearance request to begin the process. All 6 departments will be notified simultaneously.</p>
+    <button class="btn btn-primary btn-lg" onclick="submitClearanceRequest()">
+      📤 Submit Clearance Request
+    </button>
+    <div id="submitError" class="alert alert-error" style="display:none;max-width:400px;margin:16px auto 0"></div>
+  </div>
+
+  <!-- Dashboard state -->
+  <div id="dashboardState" style="display:none">
+    <!-- Status Banner -->
+    <div id="statusBanner" class="status-banner"></div>
+
+    <!-- Progress Bar -->
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="progressLabel">Clearance Progress</span>
+        <span id="progressText">0 / 6</span>
+      </div>
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="progressBar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Refresh Bar -->
+    <div class="refresh-bar">
+      <div class="refresh-dot live" id="refreshDot"></div>
+      <span id="refreshLabel">Auto-refreshing every 30 seconds</span>
+      <span id="lastRefreshed" style="margin-left:auto;color:#aaa"></span>
+    </div>
+
+    <!-- Certificate Button (shown when COMPLETED) -->
+    <div id="certBanner" style="display:none;margin-bottom:20px">
+      <a href="/certificate/" class="btn btn-success btn-lg">
+        🎓 Download Clearance Certificate
+      </a>
+    </div>
+
+    <!-- Department Cards -->
+    <div class="section-title">Department Clearance Status</div>
+    <div class="grid-6" id="deptGrid"></div>
+  </div>
+</div>
+
+<!-- Notification Panel -->
+<div id="notifPanel" style="display:none;position:fixed;top:80px;right:20px;width:320px;background:#fff;border:1px solid var(--mmu-border);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:200;max-height:400px;overflow-y:auto">
+  <div style="padding:14px 16px;border-bottom:1px solid var(--mmu-border);font-weight:700;color:var(--mmu-navy);display:flex;justify-content:space-between">
+    Notifications
+    <span onclick="toggleNotifPanel()" style="cursor:pointer;color:#999">✕</span>
+  </div>
+  <div id="notifList" style="padding:10px"></div>
+</div>
+
+<script>
+  const API = '/api';
+  let pollInterval = null;
+  let notifPanelOpen = false;
+
+  function getToken() { return localStorage.getItem('mmu_token'); }
+  function getUser()  { return JSON.parse(localStorage.getItem('mmu_user') || 'null'); }
+
+  function authHeaders() {
+    return { 'Authorization': `Token ${getToken()}`, 'Content-Type': 'application/json' };
+  }
+
+  async function handleLogout() {
+    await fetch(`${API}/auth/logout/`, { method: 'POST', headers: authHeaders() }).catch(()=>{});
+    localStorage.removeItem('mmu_token');
+    localStorage.removeItem('mmu_user');
+    window.location.href = '/login/';
+  }
+
+  // Guard auth
+  if (!getToken()) window.location.href = '/login/';
+
+  const user = getUser();
+  if (user) {
+    document.getElementById('navUserName').textContent = user.name || user.reg_number;
+    document.getElementById('heroTitle').textContent = `Welcome, ${user.name}`;
+    document.getElementById('heroSub').textContent = `${user.reg_number} — Real-Time Clearance Dashboard`;
+  }
+
+  const DEPT_ICONS = {
+    LIBRARY: '📚', FINANCE: '💰', HOSTELS: '🏠',
+    'FACULTY': '🎓', 'ICT': '💻', REGISTRY: '📋',
+    'FACULTY/SCHOOL': '🎓',
+  };
+
+  function getBadgeClass(s) {
+    return { PENDING:'badge-pending', CLEARED:'badge-cleared', REJECTED:'badge-rejected' }[s] || 'badge-pending';
+  }
+
+  function renderDeptCard(ds) {
+    const icon = DEPT_ICONS[ds.department_code] || DEPT_ICONS[ds.department_name?.toUpperCase()] || '🏢';
+    const staffInfo = ds.cleared_by_name ? `<div class="dept-meta">👤 ${ds.cleared_by_name}</div>` : '';
+    const ts = ds.updated_at ? new Date(ds.updated_at).toLocaleString('en-KE', {dateStyle:'medium', timeStyle:'short'}) : '—';
+    return `
+      <div class="card dept-card status-${ds.status}">
+        <div class="card-body">
+          <div class="dept-icon">${icon}</div>
+          <div class="dept-name">${ds.department_name}</div>
+          <div style="margin-top:6px"><span class="badge ${getBadgeClass(ds.status)}">${ds.status}</span></div>
+          <div class="dept-remarks">${ds.remarks || '<span style="color:#bbb">Awaiting review</span>'}</div>
+          ${staffInfo}
+          <div class="dept-meta">🕐 ${ts}</div>
+        </div>
+      </div>`;
+  }
+
+  function renderDashboard(data) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('noRequestState').style.display = 'none';
+    document.getElementById('dashboardState').style.display = 'block';
+
+    const cleared = data.cleared_count || 0;
+    const total = data.dept_statuses?.length || 6;
+    const pct = Math.round((cleared / total) * 100);
+
+    // Status banner
+    const bannerEl = document.getElementById('statusBanner');
+    const statusLabels = {
+      PENDING: '⏳ Clearance request submitted. Awaiting departmental review.',
+      IN_PROGRESS: '🔄 Clearance in progress — departments are reviewing your request.',
+      COMPLETED: '🎉 Clearance complete! All departments have approved your request.',
+      REJECTED: '⚠️ One or more departments require action. Please check details below.',
+    };
+    bannerEl.className = `status-banner ${data.overall_status}`;
+    bannerEl.textContent = statusLabels[data.overall_status] || data.overall_status;
+
+    // Progress
+    document.getElementById('progressBar').style.width = `${pct}%`;
+    document.getElementById('progressText').textContent = `${cleared} / ${total}`;
+    document.getElementById('progressLabel').textContent =
+      `${pct}% Complete — ${cleared} of ${total} departments cleared`;
+
+    // Certificate button
+    const certBanner = document.getElementById('certBanner');
+    const certLink = document.getElementById('certLink');
+    if (data.overall_status === 'COMPLETED') {
+      certBanner.style.display = 'block';
+      certLink.style.display = 'block';
+    }
+
+    // Department cards
+    const grid = document.getElementById('deptGrid');
+    const ordered = ['LIBRARY','FINANCE','HOSTELS','FACULTY','ICT','REGISTRY'];
+    const sorted = [...(data.dept_statuses || [])].sort((a,b) =>
+      ordered.indexOf(a.department_code) - ordered.indexOf(b.department_code)
+    );
+    grid.innerHTML = sorted.map(renderDeptCard).join('');
+
+    // Last refresh
+    document.getElementById('lastRefreshed').textContent =
+      'Updated: ' + new Date().toLocaleTimeString('en-KE');
+  }
+
+  async function fetchStatus() {
+    try {
+      const res = await fetch(`${API}/student/clearance/status/`, { headers: authHeaders() });
+      if (res.status === 401) { window.location.href = '/login/'; return; }
+      if (res.status === 404) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('noRequestState').style.display = 'block';
+        return;
+      }
+      const data = await res.json();
+      renderDashboard(data);
+    } catch(e) {
+      console.error('Fetch error:', e);
+    }
+  }
+
+  async function submitClearanceRequest() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Submitting…';
+    document.getElementById('submitError').style.display = 'none';
+
+    try {
+      const res = await fetch(`${API}/student/clearance/submit/`, {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (res.ok) {
+        renderDashboard(data);
+        startPolling();
+      } else {
+        document.getElementById('submitError').textContent = data.error || 'Submission failed.';
+        document.getElementById('submitError').style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = '📤 Submit Clearance Request';
+      }
+    } catch(e) {
+      document.getElementById('submitError').textContent = 'Network error. Please try again.';
+      document.getElementById('submitError').style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = '📤 Submit Clearance Request';
+    }
+  }
+
+  async function loadNotifications() {
+    try {
+      const res = await fetch(`${API}/student/notifications/`, { headers: authHeaders() });
+      const data = await res.json();
+      const unread = data.filter(n => n.status === 'SENT').length;
+      const countEl = document.getElementById('notifCount');
+      if (unread > 0) {
+        countEl.textContent = unread > 9 ? '9+' : unread;
+        countEl.style.display = 'flex';
+      }
+
+      const list = document.getElementById('notifList');
+      if (!data.length) {
+        list.innerHTML = '<p style="color:#aaa;text-align:center;font-size:0.82rem;padding:20px 0">No notifications yet</p>';
+        return;
+      }
+      list.innerHTML = data.slice(0, 15).map(n => `
+        <div style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:0.82rem">
+          <div style="font-weight:600;color:var(--mmu-navy)">${n.type.replace(/_/g,' ')}</div>
+          <div style="color:#666;margin:3px 0;white-space:pre-line">${n.message.substring(0,120)}…</div>
+          <div style="color:#aaa;font-size:0.74rem">${new Date(n.sent_at).toLocaleString('en-KE')}</div>
+        </div>`).join('');
+    } catch(e) {}
+  }
+
+  function toggleNotifPanel() {
+    notifPanelOpen = !notifPanelOpen;
+    document.getElementById('notifPanel').style.display = notifPanelOpen ? 'block' : 'none';
+    if (notifPanelOpen) loadNotifications();
+  }
+
+  function startPolling() {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(fetchStatus, 30000);
+  }
+
+  // Init
+  fetchStatus().then(() => startPolling());
+  loadNotifications();
+</script>
+</body>
+</html>

@@ -1,0 +1,294 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Request — MMU Clearance</title>
+  <link rel="stylesheet" href="{% static 'css/mmu.css' %}">
+</head>
+<body>
+
+<div class="utility-bar">
+  <div class="container">
+    <span>📞 +254-700-000-000 &nbsp;|&nbsp; ✉️ info@mmu.ac.ke</span>
+    <a href="mailto:clearance@mmu.ac.ke" class="btn-contact">Contact Clearance Office</a>
+  </div>
+</div>
+
+<nav class="navbar-mmu">
+  <div class="container">
+    <a href="/staff/dashboard/" class="navbar-brand">
+      <img src="{% static 'images/mmu_logo.png' %}" alt="MMU Logo">
+      <div>
+        <div class="brand-text">Multimedia University</div>
+        <div class="brand-sub">Clearance System — Staff</div>
+      </div>
+    </a>
+    <ul class="navbar-nav">
+      <li><a href="/staff/dashboard/">← Back to Queue</a></li>
+    </ul>
+    <div class="navbar-user">
+      <span class="user-name" id="navUserName"></span>
+      <button class="btn-logout" onclick="handleLogout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="container">
+    <h1>Review Clearance Request</h1>
+    <p id="heroSub">Loading request details…</p>
+  </div>
+</div>
+
+<div class="container section">
+  <div id="loadingState" style="text-align:center;padding:60px 0">
+    <div class="spinner" style="width:40px;height:40px;margin:0 auto 16px"></div>
+    <p style="color:#777">Loading…</p>
+  </div>
+
+  <div id="mainContent" style="display:none">
+    <div class="grid-2" style="gap:24px">
+      <!-- Student Info -->
+      <div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header">
+            <span style="font-weight:700;color:var(--mmu-navy)">👤 Student Information</span>
+          </div>
+          <div class="card-body" id="studentInfo"></div>
+        </div>
+
+        <!-- Department Record -->
+        <div class="card" id="deptRecordCard" style="display:none">
+          <div class="card-header">
+            <span class="font-weight:700;color:var(--mmu-navy)" id="deptRecordTitle">Department Record</span>
+          </div>
+          <div class="card-body" id="deptRecord"></div>
+        </div>
+      </div>
+
+      <!-- Action Panel -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <span style="font-weight:700;color:var(--mmu-navy)">⚡ Clearance Decision</span>
+            <span class="badge" id="currentStatusBadge"></span>
+          </div>
+          <div class="card-body">
+            <div id="alreadyActioned" style="display:none">
+              <div class="alert alert-success" id="actionedMessage"></div>
+            </div>
+
+            <div id="actionForm">
+              <div class="form-group">
+                <label class="form-label">Remarks <span style="color:var(--mmu-danger)">*</span></label>
+                <textarea id="remarksInput" class="form-control" rows="4"
+                  placeholder="Enter your decision remarks (required)…"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Supporting Document <span style="color:#999;font-weight:400">(optional)</span></label>
+                <input id="docInput" type="file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                <div style="font-size:0.77rem;color:#888;margin-top:4px">Accepted: PDF, JPEG, PNG, Word documents</div>
+              </div>
+              <div id="actionError" class="alert alert-error" style="display:none;margin-bottom:14px"></div>
+              <div style="display:flex;gap:12px">
+                <button class="btn btn-success" style="flex:1" onclick="confirmAction('CLEARED')">
+                  ✓ Approve Clearance
+                </button>
+                <button class="btn btn-danger" style="flex:1" onclick="confirmAction('REJECTED')">
+                  ✗ Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">Confirm Decision</div>
+    <p id="modalBody" style="color:#555;font-size:0.9rem;line-height:1.6"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline-navy" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="modalConfirmBtn" onclick="submitAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = '/api';
+  let pendingAction = null;
+  const requestId = window.location.pathname.split('/').filter(Boolean).pop();
+
+  function getToken() { return localStorage.getItem('mmu_token'); }
+  function getUser()  { return JSON.parse(localStorage.getItem('mmu_user') || 'null'); }
+  function authHeaders(extra={}) { return { 'Authorization': `Token ${getToken()}`, ...extra }; }
+
+  if (!getToken()) window.location.href = '/staff/login/';
+
+  const user = getUser();
+  if (user) {
+    if (!user.staff_number) window.location.href = '/staff/login/';
+    document.getElementById('navUserName').textContent = `${user.name} (${user.department || ''})`;
+  }
+
+  async function handleLogout() {
+    await fetch(`${API}/auth/logout/`, { method: 'POST', headers: authHeaders() }).catch(()=>{});
+    localStorage.removeItem('mmu_token');
+    localStorage.removeItem('mmu_user');
+    window.location.href = '/staff/login/';
+  }
+
+  function field(label, value) {
+    return `<div class="cert-field"><span class="label">${label}</span><span class="value">${value || '—'}</span></div>`;
+  }
+
+  function getBadgeClass(s) {
+    return { PENDING:'badge-pending', CLEARED:'badge-cleared', REJECTED:'badge-rejected' }[s] || 'badge-pending';
+  }
+
+  async function loadRequest() {
+    try {
+      const res = await fetch(`${API}/staff/queue/${requestId}/`, { headers: authHeaders() });
+      if (res.status === 401) { window.location.href = '/staff/login/'; return; }
+      if (!res.ok) {
+        document.getElementById('loadingState').innerHTML = '<p style="text-align:center;color:#aaa;padding:40px">Request not found or not your department.</p>';
+        return;
+      }
+      const q = await res.json();
+      renderRequest(q);
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  function renderRequest(q) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    document.getElementById('heroSub').textContent =
+      `${q.student?.reg_number} — ${q.student?.first_name} ${q.student?.last_name}`;
+
+    // Student info
+    document.getElementById('studentInfo').innerHTML = `
+      <div style="margin-bottom:-2px">
+        ${field('Registration No.', q.student?.reg_number)}
+        ${field('Full Name', `${q.student?.first_name} ${q.student?.last_name}`)}
+        ${field('Programme', q.student?.programme_name)}
+        ${field('Faculty', q.student?.faculty_name)}
+        ${field('Admission Year', q.student?.admission_year)}
+        ${field('Academic Year', q.academic_year)}
+        ${field('Email', q.student?.email)}
+        ${field('Phone', q.student?.phone)}
+      </div>`;
+
+    // Department-specific record
+    const deptCode = user?.department_code || user?.department?.toUpperCase();
+    if (deptCode === 'LIBRARY' && q.library_record) {
+      document.getElementById('deptRecordCard').style.display = 'block';
+      document.getElementById('deptRecordTitle').textContent = '📚 Library Record';
+      const lr = q.library_record;
+      document.getElementById('deptRecord').innerHTML =
+        field('Books Borrowed', lr.books_borrowed) +
+        field('Books Returned', lr.books_returned) +
+        field('Outstanding Fines', `KES ${parseFloat(lr.fines_due).toFixed(2)}`);
+    } else if (deptCode === 'FINANCE' && q.finance_record) {
+      document.getElementById('deptRecordCard').style.display = 'block';
+      document.getElementById('deptRecordTitle').textContent = '💰 Finance Record';
+      const fr = q.finance_record;
+      document.getElementById('deptRecord').innerHTML =
+        field('Fees Balance', `KES ${parseFloat(fr.fees_balance).toFixed(2)}`) +
+        field('Other Dues', `KES ${parseFloat(fr.other_dues).toFixed(2)}`);
+    } else if (deptCode === 'HOSTELS' && q.hostel_record) {
+      document.getElementById('deptRecordCard').style.display = 'block';
+      document.getElementById('deptRecordTitle').textContent = '🏠 Hostel Record';
+      const hr = q.hostel_record;
+      document.getElementById('deptRecord').innerHTML =
+        field('Room Number', hr.room_number) +
+        field('Block', hr.block) +
+        field('Balance Due', `KES ${parseFloat(hr.balance_due).toFixed(2)}`);
+    }
+
+    // Current status
+    const badge = document.getElementById('currentStatusBadge');
+    badge.className = `badge ${getBadgeClass(q.status)}`;
+    badge.textContent = q.status;
+
+    // If already actioned
+    if (q.status !== 'PENDING') {
+      document.getElementById('alreadyActioned').style.display = 'block';
+      document.getElementById('actionedMessage').textContent =
+        `This request was ${q.status} by ${q.cleared_by_name || 'staff'}. Remarks: ${q.remarks || 'N/A'}`;
+      document.getElementById('actionForm').style.display = 'none';
+    }
+  }
+
+  function confirmAction(action) {
+    const remarks = document.getElementById('remarksInput').value.trim();
+    if (!remarks) {
+      document.getElementById('actionError').textContent = 'Remarks are required before making a decision.';
+      document.getElementById('actionError').style.display = 'block';
+      return;
+    }
+    document.getElementById('actionError').style.display = 'none';
+    pendingAction = action;
+
+    const isApprove = action === 'CLEARED';
+    document.getElementById('modalTitle').textContent = isApprove ? '✓ Confirm Approval' : '✗ Confirm Rejection';
+    document.getElementById('modalBody').textContent =
+      `Are you sure you want to ${isApprove ? 'approve' : 'reject'} this student's clearance request? This action will trigger an email notification to the student.`;
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    confirmBtn.className = `btn ${isApprove ? 'btn-success' : 'btn-danger'}`;
+    confirmBtn.textContent = isApprove ? 'Approve' : 'Reject';
+    document.getElementById('confirmModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('confirmModal').classList.remove('open');
+    pendingAction = null;
+  }
+
+  async function submitAction() {
+    closeModal();
+    const remarks = document.getElementById('remarksInput').value.trim();
+    const docFile = document.getElementById('docInput').files[0];
+
+    const formData = new FormData();
+    formData.append('status', pendingAction);
+    formData.append('remarks', remarks);
+    if (docFile) formData.append('document', docFile);
+
+    const submitBtn = document.querySelector('.card-body button');
+    try {
+      const res = await fetch(`${API}/staff/queue/${requestId}/action/`, {
+        method: 'POST',
+        headers: authHeaders(),  // No Content-Type — let browser set multipart boundary
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Reload to show updated state
+        window.location.reload();
+      } else {
+        document.getElementById('actionError').textContent = data.error || 'Action failed.';
+        document.getElementById('actionError').style.display = 'block';
+      }
+    } catch(e) {
+      document.getElementById('actionError').textContent = 'Network error. Please try again.';
+      document.getElementById('actionError').style.display = 'block';
+    }
+  }
+
+  // Close modal on overlay click
+  document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  loadRequest();
+</script>
+</body>
+</html>
