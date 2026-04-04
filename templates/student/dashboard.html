@@ -303,6 +303,8 @@
     document.getElementById('submitForm').style.display='none';
     document.getElementById('statusView').style.display='block';
     document.getElementById('tab-clearance').style.display='block';
+    document.getElementById('nav-clearance').classList.add('active');
+    document.getElementById('nav-dashboard').classList.remove('active');
     currentData = data;
 
     const depts = data.dept_statuses||[];
@@ -356,6 +358,9 @@
     document.getElementById('statusView').style.display='none';
     document.getElementById('submitForm').style.display='block';
     document.getElementById('tab-clearance').style.display='block';
+    // Make clearance tab active
+    document.getElementById('nav-clearance').classList.add('active');
+    document.getElementById('nav-dashboard').classList.remove('active');
     // Populate read-only fields
     document.getElementById('f-reg').textContent = profile.reg_number || '—';
     document.getElementById('f-prog').textContent = (profile.programme_code||'') + ' - ' + (profile.programme_name||'');
@@ -372,22 +377,34 @@
 
   async function loadDashboard() {
     try {
-      const [profileRes, statusRes] = await Promise.all([
-        fetch(API+'/student/profile/',{headers:authHdr()}),
-        fetch(API+'/student/clearance/status/',{headers:authHdr()})
-      ]);
-      if (profileRes.status===401||statusRes.status===401) { window.location.href='/login/'; return; }
+      // Step 1: Always fetch profile first
+      const profileRes = await fetch(API+'/student/profile/', {headers:authHdr()});
+      if (profileRes.status === 401) { window.location.href='/login/'; return; }
       const profile = await profileRes.json();
+      studentProfile = profile;
 
-      if (statusRes.status===404) {
+      // Step 2: Check clearance status
+      const statusRes = await fetch(API+'/student/clearance/status/', {headers:authHdr()});
+      if (statusRes.status === 401) { window.location.href='/login/'; return; }
+
+      if (statusRes.status === 404) {
+        // No request yet — show the form with profile pre-filled
         renderSubmitForm(profile);
       } else {
+        // Has a request — show status view
         const data = await statusRes.json();
         renderStatus(data);
       }
-    } catch(e) { console.error(e); }
+    } catch(e) {
+      console.error('Dashboard load error:', e);
+      document.getElementById('loadingState').innerHTML =
+        '<p style="color:#e44;text-align:center;padding:40px">Failed to load. <a href="#" onclick="location.reload()">Click to retry</a></p>';
+    }
     showTab('clearance');
   }
+
+  // Store profile globally so status view can reference it
+  let studentProfile = null;
 
   async function submitClearance() {
     const btn=document.getElementById('submitBtn');
@@ -481,8 +498,12 @@
     },30000);
   }
 
-  loadDashboard().then(()=>startPolling());
-  loadNotifications();
+  // Load dashboard immediately on page load - no delay
+  (async function init() {
+    await loadDashboard();
+    startPolling();
+    loadNotifications();
+  })();
 </script>
 </body>
 </html>

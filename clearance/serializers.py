@@ -151,6 +151,7 @@ class StaffQueueItemSerializer(serializers.ModelSerializer):
     academic_year = serializers.CharField(source='request.academic_year', read_only=True)
     initiated_date = serializers.DateField(source='request.initiated_date', read_only=True)
     cleared_by_name = serializers.SerializerMethodField()
+    document_url = serializers.SerializerMethodField()
     library_record = serializers.SerializerMethodField()
     finance_record = serializers.SerializerMethodField()
     hostel_record = serializers.SerializerMethodField()
@@ -159,7 +160,7 @@ class StaffQueueItemSerializer(serializers.ModelSerializer):
         model = DeptClearanceStatus
         fields = [
             'id', 'request_id', 'student', 'department_name',
-            'status', 'remarks', 'document', 'updated_at',
+            'status', 'remarks', 'document', 'document_url', 'updated_at',
             'cleared_by', 'cleared_by_name',
             'academic_year', 'initiated_date',
             'library_record', 'finance_record', 'hostel_record'
@@ -168,6 +169,18 @@ class StaffQueueItemSerializer(serializers.ModelSerializer):
     def get_cleared_by_name(self, obj):
         if obj.cleared_by:
             return obj.cleared_by.full_name
+        return None
+
+    def get_document_url(self, obj):
+        if obj.document:
+            request = self.context.get('request')
+            try:
+                url = obj.document.url
+                if request:
+                    return request.build_absolute_uri(url)
+                return url
+            except Exception:
+                return None
         return None
 
     def get_library_record(self, obj):
