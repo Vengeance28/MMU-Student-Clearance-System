@@ -252,36 +252,37 @@ class StaffQueueDetailView(BaseView):
 
 class StaffActionView(BaseView):
     """POST /api/staff/queue/<request_id>/action/"""
-    permission_classes = [IsStaff]
+    permission_classes = []
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request, request_id):
+        staff = getattr(request, 'staff', None)
+        if not staff:
+            return Response({'error': 'Authentication required.'}, status=401)
+
         try:
             dept_status = DeptClearanceStatus.objects.select_related(
                 'request__student', 'department'
-            ).get(
-                request_id=request_id,
-                department=request.staff.department
-            )
+            ).get(request_id=request_id, department=staff.department)
         except DeptClearanceStatus.DoesNotExist:
             return Response({'error': 'Not found or not your department.'}, status=404)
 
-        action = request.data.get('status', '').upper()
-        remarks = request.data.get('remarks', '').strip()
+        action = str(request.data.get('status', '') or '').strip().upper()
+        remarks = str(request.data.get('remarks', '') or '').strip()
         document = request.FILES.get('document', None)
 
         if action not in ('CLEARED', 'REJECTED'):
-            return Response({'error': 'status must be CLEARED or REJECTED.'}, status=400)
+            return Response({'error': 'status must be CLEARED or REJECTED. Got: ' + repr(action)}, status=400)
 
         if not remarks:
             return Response({'error': 'remarks are required.'}, status=400)
 
         dept_status.status = action
         dept_status.remarks = remarks
-        dept_status.cleared_by = request.staff
+        dept_status.cleared_by = staff
         if document:
             dept_status.document = document
-        dept_status.save()  # Triggers post_save signal → recalculate + email
+        dept_status.save()
 
         serializer = StaffQueueItemSerializer(dept_status, context={'request': request})
         return Response(serializer.data)

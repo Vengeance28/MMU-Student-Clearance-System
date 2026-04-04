@@ -50,7 +50,6 @@
 
   <div id="mainContent" style="display:none">
     <div class="grid-2" style="gap:24px">
-      <!-- Student Info -->
       <div>
         <div class="card" style="margin-bottom:20px">
           <div class="card-header">
@@ -58,17 +57,14 @@
           </div>
           <div class="card-body" id="studentInfo"></div>
         </div>
-
-        <!-- Department Record -->
         <div class="card" id="deptRecordCard" style="display:none">
           <div class="card-header">
-            <span class="font-weight:700;color:var(--mmu-navy)" id="deptRecordTitle">Department Record</span>
+            <span style="font-weight:700;color:var(--mmu-navy)" id="deptRecordTitle">Department Record</span>
           </div>
           <div class="card-body" id="deptRecord"></div>
         </div>
       </div>
 
-      <!-- Action Panel -->
       <div>
         <div class="card">
           <div class="card-header">
@@ -79,7 +75,6 @@
             <div id="alreadyActioned" style="display:none">
               <div class="alert alert-success" id="actionedMessage"></div>
             </div>
-
             <div id="actionForm">
               <div class="form-group">
                 <label class="form-label">Remarks <span style="color:var(--mmu-danger)">*</span></label>
@@ -93,12 +88,8 @@
               </div>
               <div id="actionError" class="alert alert-error" style="display:none;margin-bottom:14px"></div>
               <div style="display:flex;gap:12px">
-                <button class="btn btn-success" style="flex:1" onclick="confirmAction('CLEARED')">
-                  ✓ Approve Clearance
-                </button>
-                <button class="btn btn-danger" style="flex:1" onclick="confirmAction('REJECTED')">
-                  ✗ Reject
-                </button>
+                <button class="btn btn-success" style="flex:1" onclick="confirmAction('CLEARED')">✓ Approve Clearance</button>
+                <button class="btn btn-danger" style="flex:1" onclick="confirmAction('REJECTED')">✗ Reject</button>
               </div>
             </div>
           </div>
@@ -122,113 +113,108 @@
 
 <script>
   const API = '/api';
-  let pendingAction = null;
+  var pendingAction = null;
   const requestId = window.location.pathname.split('/').filter(Boolean).pop();
 
   function getToken() { return localStorage.getItem('mmu_token'); }
   function getUser()  { return JSON.parse(localStorage.getItem('mmu_user') || 'null'); }
-  function authHeaders(extra={}) { return { 'Authorization': `Token ${getToken()}`, ...extra }; }
 
   if (!getToken()) window.location.href = '/staff/login/';
 
   const user = getUser();
   if (user) {
     if (!user.staff_number) window.location.href = '/staff/login/';
-    document.getElementById('navUserName').textContent = `${user.name} (${user.department || ''})`;
+    document.getElementById('navUserName').textContent = user.name + ' (' + (user.department || '') + ')';
   }
 
   async function handleLogout() {
-    await fetch(`${API}/auth/logout/`, { method: 'POST', headers: authHeaders() }).catch(()=>{});
+    await fetch(API + '/auth/logout/', { method: 'POST', headers: { 'Authorization': 'Token ' + getToken() } }).catch(function(){});
     localStorage.removeItem('mmu_token');
     localStorage.removeItem('mmu_user');
     window.location.href = '/staff/login/';
   }
 
   function field(label, value) {
-    return `<div class="cert-field"><span class="label">${label}</span><span class="value">${value || '—'}</span></div>`;
+    return '<div class="cert-field"><span class="label">' + label + '</span><span class="value">' + (value || '—') + '</span></div>';
   }
 
   function getBadgeClass(s) {
-    return { PENDING:'badge-pending', CLEARED:'badge-cleared', REJECTED:'badge-rejected' }[s] || 'badge-pending';
+    var map = { PENDING:'badge-pending', CLEARED:'badge-cleared', REJECTED:'badge-rejected' };
+    return map[s] || 'badge-pending';
   }
 
   async function loadRequest() {
     try {
-      const res = await fetch(`${API}/staff/queue/${requestId}/`, { headers: authHeaders() });
+      var res = await fetch(API + '/staff/queue/' + requestId + '/', {
+        headers: { 'Authorization': 'Token ' + getToken() }
+      });
       if (res.status === 401) { window.location.href = '/staff/login/'; return; }
       if (!res.ok) {
         document.getElementById('loadingState').innerHTML = '<p style="text-align:center;color:#aaa;padding:40px">Request not found or not your department.</p>';
         return;
       }
-      const q = await res.json();
+      var q = await res.json();
       renderRequest(q);
-    } catch(e) {
-      console.error(e);
-    }
+    } catch(e) { console.error(e); }
   }
 
   function renderRequest(q) {
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('mainContent').style.display = 'block';
     document.getElementById('heroSub').textContent =
-      `${q.student?.reg_number} — ${q.student?.first_name} ${q.student?.last_name}`;
+      (q.student && q.student.reg_number ? q.student.reg_number : '') + ' — ' +
+      (q.student ? q.student.first_name + ' ' + q.student.last_name : '');
 
-    // Student info
-    document.getElementById('studentInfo').innerHTML = `
-      <div style="margin-bottom:-2px">
-        ${field('Registration No.', q.student?.reg_number)}
-        ${field('Full Name', `${q.student?.first_name} ${q.student?.last_name}`)}
-        ${field('Programme', q.student?.programme_name)}
-        ${field('Faculty', q.student?.faculty_name)}
-        ${field('Admission Year', q.student?.admission_year)}
-        ${field('Academic Year', q.academic_year)}
-        ${field('Email', q.student?.email)}
-        ${field('Phone', q.student?.phone)}
-      </div>`;
+    document.getElementById('studentInfo').innerHTML =
+      field('Registration No.', q.student && q.student.reg_number) +
+      field('Full Name', q.student ? q.student.first_name + ' ' + q.student.last_name : '') +
+      field('Programme', q.student && q.student.programme_name) +
+      field('Faculty', q.student && q.student.faculty_name) +
+      field('Admission Year', q.student && q.student.admission_year) +
+      field('Academic Year', q.academic_year) +
+      field('Email', q.student && q.student.email) +
+      field('Phone', q.student && q.student.phone);
 
-    // Department-specific record
-    const deptCode = user?.department_code || user?.department?.toUpperCase();
+    var deptCode = user && (user.department_code || (user.department && user.department.toUpperCase()));
     if (deptCode === 'LIBRARY' && q.library_record) {
       document.getElementById('deptRecordCard').style.display = 'block';
       document.getElementById('deptRecordTitle').textContent = '📚 Library Record';
-      const lr = q.library_record;
+      var lr = q.library_record;
       document.getElementById('deptRecord').innerHTML =
         field('Books Borrowed', lr.books_borrowed) +
         field('Books Returned', lr.books_returned) +
-        field('Outstanding Fines', `KES ${parseFloat(lr.fines_due).toFixed(2)}`);
+        field('Outstanding Fines', 'KES ' + parseFloat(lr.fines_due).toFixed(2));
     } else if (deptCode === 'FINANCE' && q.finance_record) {
       document.getElementById('deptRecordCard').style.display = 'block';
       document.getElementById('deptRecordTitle').textContent = '💰 Finance Record';
-      const fr = q.finance_record;
+      var fr = q.finance_record;
       document.getElementById('deptRecord').innerHTML =
-        field('Fees Balance', `KES ${parseFloat(fr.fees_balance).toFixed(2)}`) +
-        field('Other Dues', `KES ${parseFloat(fr.other_dues).toFixed(2)}`);
+        field('Fees Balance', 'KES ' + parseFloat(fr.fees_balance).toFixed(2)) +
+        field('Other Dues', 'KES ' + parseFloat(fr.other_dues).toFixed(2));
     } else if (deptCode === 'HOSTELS' && q.hostel_record) {
       document.getElementById('deptRecordCard').style.display = 'block';
       document.getElementById('deptRecordTitle').textContent = '🏠 Hostel Record';
-      const hr = q.hostel_record;
+      var hr = q.hostel_record;
       document.getElementById('deptRecord').innerHTML =
         field('Room Number', hr.room_number) +
         field('Block', hr.block) +
-        field('Balance Due', `KES ${parseFloat(hr.balance_due).toFixed(2)}`);
+        field('Balance Due', 'KES ' + parseFloat(hr.balance_due).toFixed(2));
     }
 
-    // Current status
-    const badge = document.getElementById('currentStatusBadge');
-    badge.className = `badge ${getBadgeClass(q.status)}`;
+    var badge = document.getElementById('currentStatusBadge');
+    badge.className = 'badge ' + getBadgeClass(q.status);
     badge.textContent = q.status;
 
-    // If already actioned
     if (q.status !== 'PENDING') {
       document.getElementById('alreadyActioned').style.display = 'block';
       document.getElementById('actionedMessage').textContent =
-        `This request was ${q.status} by ${q.cleared_by_name || 'staff'}. Remarks: ${q.remarks || 'N/A'}`;
+        'This request was ' + q.status + ' by ' + (q.cleared_by_name || 'staff') + '. Remarks: ' + (q.remarks || 'N/A');
       document.getElementById('actionForm').style.display = 'none';
     }
   }
 
   function confirmAction(action) {
-    const remarks = document.getElementById('remarksInput').value.trim();
+    var remarks = document.getElementById('remarksInput').value.trim();
     if (!remarks) {
       document.getElementById('actionError').textContent = 'Remarks are required before making a decision.';
       document.getElementById('actionError').style.display = 'block';
@@ -237,53 +223,78 @@
     document.getElementById('actionError').style.display = 'none';
     pendingAction = action;
 
-    const isApprove = action === 'CLEARED';
+    var isApprove = action === 'CLEARED';
     document.getElementById('modalTitle').textContent = isApprove ? '✓ Confirm Approval' : '✗ Confirm Rejection';
     document.getElementById('modalBody').textContent =
-      `Are you sure you want to ${isApprove ? 'approve' : 'reject'} this student's clearance request? This action will trigger an email notification to the student.`;
-    const confirmBtn = document.getElementById('modalConfirmBtn');
-    confirmBtn.className = `btn ${isApprove ? 'btn-success' : 'btn-danger'}`;
+      isApprove
+        ? 'Approve this student\'s clearance? They will be notified by email.'
+        : 'Reject this request? The student will receive an email with your remarks explaining what they need to do.';
+    var confirmBtn = document.getElementById('modalConfirmBtn');
+    confirmBtn.className = 'btn ' + (isApprove ? 'btn-success' : 'btn-danger');
     confirmBtn.textContent = isApprove ? 'Approve' : 'Reject';
     document.getElementById('confirmModal').classList.add('open');
   }
 
   function closeModal() {
     document.getElementById('confirmModal').classList.remove('open');
-    pendingAction = null;
+    // Do NOT reset pendingAction here — submitAction needs it
   }
 
   async function submitAction() {
+    var actionToSubmit = pendingAction;
+    pendingAction = null;
     closeModal();
-    const remarks = document.getElementById('remarksInput').value.trim();
-    const docFile = document.getElementById('docInput').files[0];
 
-    const formData = new FormData();
-    formData.append('status', pendingAction);
-    formData.append('remarks', remarks);
-    if (docFile) formData.append('document', docFile);
+    if (!actionToSubmit) { return; }
 
-    const submitBtn = document.querySelector('.card-body button');
+    var remarks = document.getElementById('remarksInput').value.trim();
+    var docFile = document.getElementById('docInput').files[0];
+
+    document.querySelectorAll('#actionForm .btn').forEach(function(b) { b.disabled = true; });
+    document.getElementById('actionError').style.display = 'none';
+
     try {
-      const res = await fetch(`${API}/staff/queue/${requestId}/action/`, {
-        method: 'POST',
-        headers: authHeaders(),  // No Content-Type — let browser set multipart boundary
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        // Reload to show updated state
-        window.location.reload();
+      var res;
+      if (docFile) {
+        var formData = new FormData();
+        formData.append('status', actionToSubmit);
+        formData.append('remarks', remarks);
+        formData.append('document', docFile);
+        res = await fetch(API + '/staff/queue/' + requestId + '/action/', {
+          method: 'POST',
+          headers: { 'Authorization': 'Token ' + getToken() },
+          body: formData
+        });
       } else {
-        document.getElementById('actionError').textContent = data.error || 'Action failed.';
+        res = await fetch(API + '/staff/queue/' + requestId + '/action/', {
+          method: 'POST',
+          headers: { 'Authorization': 'Token ' + getToken(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: actionToSubmit, remarks: remarks })
+        });
+      }
+
+      var data = await res.json();
+      if (res.ok) {
+        var isApprove = actionToSubmit === 'CLEARED';
+        document.getElementById('actionForm').innerHTML =
+          '<div class="alert alert-' + (isApprove ? 'success' : 'error') + '" style="margin-bottom:16px">' +
+          (isApprove
+            ? '✅ Student cleared! They have been notified by email.'
+            : '📧 Request rejected. The student has been emailed your remarks and told exactly what steps to take next.') +
+          '</div>' +
+          '<a href="/staff/dashboard/" class="btn btn-secondary">← Back to Queue</a>';
+      } else {
+        document.getElementById('actionError').textContent = data.error || 'Action failed. Please try again.';
         document.getElementById('actionError').style.display = 'block';
+        document.querySelectorAll('#actionForm .btn').forEach(function(b) { b.disabled = false; });
       }
     } catch(e) {
       document.getElementById('actionError').textContent = 'Network error. Please try again.';
       document.getElementById('actionError').style.display = 'block';
+      document.querySelectorAll('#actionForm .btn').forEach(function(b) { b.disabled = false; });
     }
   }
 
-  // Close modal on overlay click
   document.getElementById('confirmModal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
