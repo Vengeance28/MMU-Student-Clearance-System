@@ -6,42 +6,217 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Login — MMU Clearance System</title>
   <link rel="stylesheet" href="{% static 'css/mmu.css' %}">
+  <style>
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      background: #f0f2f8;
+    }
+    .login-left {
+      flex: 1;
+      background: linear-gradient(160deg, #1B2A6B 0%, #0d1a4a 60%, #1a0a2e 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .login-left::before {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      border-radius: 50%;
+      background: rgba(204,0,0,0.08);
+      top: -100px; right: -100px;
+    }
+    .login-left::after {
+      content: '';
+      position: absolute;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+      bottom: -50px; left: -50px;
+    }
+    .login-left-content { position: relative; z-index: 1; text-align: center; max-width: 380px; }
+    .login-left h1 { font-size: 1.8rem; font-weight: 800; margin: 20px 0 10px; letter-spacing: -0.5px; }
+    .login-left p { color: rgba(255,255,255,0.65); font-size: 0.9rem; line-height: 1.7; }
+    .login-features { margin-top: 32px; text-align: left; }
+    .login-feature {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px; font-size: 0.85rem; color: rgba(255,255,255,0.8);
+    }
+    .login-feature-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: rgba(204,0,0,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .login-right {
+      width: 460px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      background: #fff;
+    }
+    .login-box {
+      width: 100%;
+      max-width: 380px;
+    }
+    .login-logo { margin-bottom: 28px; }
+    .login-logo img { height: 70px; }
+    .login-title { font-size: 1.5rem; font-weight: 800; color: var(--mmu-navy); margin-bottom: 4px; }
+    .login-subtitle { color: #888; font-size: 0.85rem; margin-bottom: 28px; }
+    .input-group { position: relative; margin-bottom: 18px; }
+    .input-icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      color: #aaa; font-size: 1rem; pointer-events: none;
+    }
+    .input-group .form-control { padding-left: 42px; height: 48px; border-radius: 8px; font-size: 0.9rem; }
+    .input-group .form-control:focus { border-color: var(--mmu-navy); box-shadow: 0 0 0 3px rgba(27,42,107,0.1); }
+    .btn-login {
+      width: 100%; height: 48px; border-radius: 8px;
+      background: var(--mmu-red); color: white; border: none;
+      font-size: 0.95rem; font-weight: 700; cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-login:hover { background: #aa0000; }
+    .btn-login:active { transform: scale(0.99); }
+    .forgot-link {
+      text-align: right; margin-top: -10px; margin-bottom: 18px;
+      font-size: 0.82rem;
+    }
+    .forgot-link a { color: var(--mmu-navy); text-decoration: none; }
+    .forgot-link a:hover { color: var(--mmu-red); text-decoration: underline; }
+    .divider { text-align: center; color: #ccc; font-size: 0.8rem; margin: 20px 0; position: relative; }
+    .divider::before, .divider::after {
+      content: ''; position: absolute; top: 50%; width: 40%; height: 1px; background: #eee;
+    }
+    .divider::before { left: 0; }
+    .divider::after { right: 0; }
+    .staff-link {
+      display: block; text-align: center; padding: 11px;
+      border: 2px solid var(--mmu-navy); border-radius: 8px;
+      color: var(--mmu-navy); text-decoration: none; font-size: 0.88rem; font-weight: 600;
+      transition: all 0.2s;
+    }
+    .staff-link:hover { background: var(--mmu-navy); color: white; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box { background: #fff; border-radius: 14px; padding: 32px; max-width: 420px; width: 95%; box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
+    .modal-title { font-size: 1.1rem; font-weight: 700; color: var(--mmu-navy); margin-bottom: 8px; }
+    .modal-sub { color: #777; font-size: 0.85rem; margin-bottom: 20px; }
+
+    @media (max-width: 768px) {
+      .login-left { display: none; }
+      .login-right { width: 100%; padding: 30px 20px; }
+    }
+  </style>
 </head>
 <body>
 <div class="login-page">
-  <div class="login-box">
-    <div class="login-logo">
-      <img src="{% static 'images/mmu_logo.png' %}" alt="MMU Logo">
+  <!-- Left Panel -->
+  <div class="login-left">
+    <div class="login-left-content">
+      <img src="{% static 'images/mmu_logo.png' %}" alt="MMU" style="height:90px">
+      <h1>Student Clearance System</h1>
+      <p>Multimedia University of Kenya's digital clearance platform — fast, transparent, and paperless.</p>
+      <div class="login-features">
+        <div class="login-feature">
+          <div class="login-feature-icon">📊</div>
+          <span>Real-time status tracking across all 6 departments</span>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-icon">⚡</div>
+          <span>Parallel processing — all departments simultaneously</span>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-icon">📧</div>
+          <span>Instant email notifications at every stage</span>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-icon">🎓</div>
+          <span>Downloadable official clearance certificate</span>
+        </div>
+      </div>
     </div>
-    <div class="login-title">Student Portal</div>
-    <div class="login-subtitle">MMU Student Clearance System</div>
+  </div>
 
-    <div id="errorAlert" class="alert alert-error" style="display:none"></div>
+  <!-- Right Panel -->
+  <div class="login-right">
+    <div class="login-box">
+      <div class="login-logo">
+        <img src="{% static 'images/mmu_logo.png' %}" alt="MMU Logo">
+      </div>
+      <div class="login-title">Welcome back</div>
+      <div class="login-subtitle">Sign in to your student clearance portal</div>
 
+      <div id="errorAlert" class="alert alert-error" style="display:none;margin-bottom:16px"></div>
+      <div id="successAlert" class="alert alert-success" style="display:none;margin-bottom:16px"></div>
+
+      <div class="input-group">
+        <span class="input-icon">🎓</span>
+        <input id="regNumber" class="form-control" type="text"
+               placeholder="Registration Number (e.g. CIT-222-044/2020)" autocomplete="username">
+      </div>
+
+      <div class="input-group">
+        <span class="input-icon">🔒</span>
+        <input id="password" class="form-control" type="password"
+               placeholder="Password" autocomplete="current-password">
+      </div>
+
+      <div class="forgot-link">
+        <a href="#" onclick="openForgotModal();return false">Forgot password?</a>
+      </div>
+
+      <button class="btn-login" id="loginBtn" onclick="doLogin()">
+        Sign In →
+      </button>
+
+      <div class="divider">or</div>
+
+      <a href="/staff/login/" class="staff-link">Staff / Admin Login</a>
+
+      <div style="text-align:center;margin-top:20px;font-size:0.76rem;color:#aaa">
+        © 2024 Multimedia University of Kenya
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal-box">
+    <div class="modal-title">🔑 Reset Password</div>
+    <div class="modal-sub">Enter your registration number and email. We'll send a temporary password.</div>
+    <div id="forgotError" class="alert alert-error" style="display:none;margin-bottom:14px"></div>
+    <div id="forgotSuccess" class="alert alert-success" style="display:none;margin-bottom:14px"></div>
     <div class="form-group">
       <label class="form-label">Registration Number</label>
-      <input id="regNumber" class="form-control" type="text"
-             placeholder="e.g. CIT-222-044/2020" autocomplete="username">
+      <input id="forgotReg" class="form-control" type="text" placeholder="e.g. CIT-222-044/2020">
     </div>
     <div class="form-group">
-      <label class="form-label">Password</label>
-      <input id="password" class="form-control" type="password"
-             placeholder="Enter your password" autocomplete="current-password">
+      <label class="form-label">Email Address</label>
+      <input id="forgotEmail" class="form-control" type="email" placeholder="your.email@students.mmu.ac.ke">
     </div>
-    <button id="loginBtn" class="btn btn-primary" style="width:100%" onclick="doLogin()">
-      Sign In
-    </button>
-    <div style="text-align:center;margin-top:18px;font-size:0.82rem;color:#777">
-      Are you staff? <a href="/staff/login/" style="color:var(--mmu-navy);font-weight:600">Staff Login →</a>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-outline-navy" style="flex:1" onclick="closeForgotModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="forgotBtn" onclick="doForgotPassword()">Send Reset Email</button>
     </div>
   </div>
 </div>
 
 <script>
-  // Redirect if already logged in
-  if (localStorage.getItem('mmu_token') && localStorage.getItem('mmu_user')) {
-    const user = JSON.parse(localStorage.getItem('mmu_user'));
-    if (user.reg_number) window.location.href = '/dashboard/';
+  if (localStorage.getItem('mmu_token')) {
+    const u = JSON.parse(localStorage.getItem('mmu_user') || '{}');
+    if (u.reg_number) window.location.href = '/dashboard/';
   }
 
   document.getElementById('password').addEventListener('keypress', e => {
@@ -50,16 +225,12 @@
 
   async function doLogin() {
     const btn = document.getElementById('loginBtn');
-    const err = document.getElementById('errorAlert');
     const reg = document.getElementById('regNumber').value.trim();
     const pw  = document.getElementById('password').value;
-
-    err.style.display = 'none';
+    document.getElementById('errorAlert').style.display = 'none';
     if (!reg || !pw) { showError('Please enter your registration number and password.'); return; }
-
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> Signing in…';
-
+    btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px"></span> Signing in…';
     try {
       const res = await fetch('/api/auth/student/login/', {
         method: 'POST',
@@ -67,27 +238,67 @@
         body: JSON.stringify({ reg_number: reg, password: pw })
       });
       const data = await res.json();
-
       if (res.ok) {
         localStorage.setItem('mmu_token', data.token);
         localStorage.setItem('mmu_user', JSON.stringify(data));
         window.location.href = '/dashboard/';
       } else {
-        showError(data.error || 'Login failed. Please check your credentials.');
+        showError(data.error || 'Invalid credentials. Please try again.');
       }
-    } catch (e) {
-      showError('Network error. Please try again.');
-    }
-
+    } catch(e) { showError('Network error. Please try again.'); }
     btn.disabled = false;
-    btn.innerHTML = 'Sign In';
+    btn.innerHTML = 'Sign In →';
   }
 
   function showError(msg) {
     const el = document.getElementById('errorAlert');
-    el.textContent = msg;
-    el.style.display = 'block';
+    el.textContent = msg; el.style.display = 'block';
   }
+
+  function openForgotModal() { document.getElementById('forgotModal').classList.add('open'); }
+  function closeForgotModal() {
+    document.getElementById('forgotModal').classList.remove('open');
+    document.getElementById('forgotError').style.display = 'none';
+    document.getElementById('forgotSuccess').style.display = 'none';
+    document.getElementById('forgotReg').value = '';
+    document.getElementById('forgotEmail').value = '';
+  }
+
+  async function doForgotPassword() {
+    const btn = document.getElementById('forgotBtn');
+    const reg = document.getElementById('forgotReg').value.trim();
+    const email = document.getElementById('forgotEmail').value.trim();
+    document.getElementById('forgotError').style.display = 'none';
+    document.getElementById('forgotSuccess').style.display = 'none';
+    if (!reg || !email) {
+      document.getElementById('forgotError').textContent = 'Please fill in both fields.';
+      document.getElementById('forgotError').style.display = 'block'; return;
+    }
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      const res = await fetch('/api/auth/student/forgot-password/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reg_number: reg, email: email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('forgotSuccess').textContent = data.message || 'Check your email for your temporary password.';
+        document.getElementById('forgotSuccess').style.display = 'block';
+      } else {
+        document.getElementById('forgotError').textContent = data.error || 'Could not process request.';
+        document.getElementById('forgotError').style.display = 'block';
+      }
+    } catch(e) {
+      document.getElementById('forgotError').textContent = 'Network error. Please try again.';
+      document.getElementById('forgotError').style.display = 'block';
+    }
+    btn.disabled = false; btn.textContent = 'Send Reset Email';
+  }
+
+  document.getElementById('forgotModal').addEventListener('click', function(e) {
+    if (e.target === this) closeForgotModal();
+  });
 </script>
 </body>
 </html>

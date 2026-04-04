@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    StudentForgotPasswordView, StaffForgotPasswordView,
     StudentLoginView, StaffLoginView, LogoutView,
     StudentProfileView, StudentClearanceStatusView,
     StudentClearanceSubmitView, StudentCertificateView,
@@ -27,6 +28,10 @@ urlpatterns = [
     path('staff/queue/<int:request_id>/', StaffQueueDetailView.as_view(), name='staff-queue-detail'),
     path('staff/queue/<int:request_id>/action/', StaffActionView.as_view(), name='staff-action'),
     path('staff/history/', StaffHistoryView.as_view(), name='staff-history'),
+
+    # Forgot password
+    path('auth/student/forgot-password/', StudentForgotPasswordView.as_view(), name='student-forgot-password'),
+    path('auth/staff/forgot-password/', StaffForgotPasswordView.as_view(), name='staff-forgot-password'),
 
     # Admin
     path('admin/requests/', AdminRequestsView.as_view(), name='admin-requests'),

@@ -416,3 +416,93 @@ class AdminReportsSummaryView(BaseView):
             'rejected': rejected,
             'by_department': by_department,
         })
+
+
+class StudentForgotPasswordView(BaseView):
+    """POST /api/auth/student/forgot-password/"""
+
+    def post(self, request):
+        from django.contrib.auth.hashers import make_password
+        import secrets, string
+        reg_number = request.data.get('reg_number', '').strip()
+        email = request.data.get('email', '').strip().lower()
+        if not reg_number or not email:
+            return Response({'error': 'Registration number and email are required.'}, status=400)
+        try:
+            student = Student.objects.get(reg_number=reg_number, email__iexact=email)
+        except Student.DoesNotExist:
+            return Response({'error': 'No account found with that registration number and email combination.'}, status=404)
+        # Generate temp password
+        temp_pw = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+        student.set_password(temp_pw)
+        student.save(update_fields=['password_hash'])
+        # Send email
+        from django.core.mail import send_mail
+        from django.conf import settings
+        try:
+            send_mail(
+                subject='MMU Clearance — Password Reset',
+                message=f"""Dear {student.full_name},
+
+Your password has been reset as requested.
+
+Temporary Password: {temp_pw}
+
+Please log in and change your password immediately.
+
+Login at: https://mmu-student-clearance-system-sm2r.vercel.app/login/
+
+Best regards,
+MMU Clearance System
+""",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[student.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            return Response({'error': 'Could not send email. Please contact the clearance office.'}, status=500)
+        return Response({'message': f'A temporary password has been sent to {email}. Please check your inbox.'})
+
+
+class StaffForgotPasswordView(BaseView):
+    """POST /api/auth/staff/forgot-password/"""
+
+    def post(self, request):
+        import secrets, string
+        staff_number = request.data.get('staff_number', '').strip()
+        email = request.data.get('email', '').strip().lower()
+        if not staff_number or not email:
+            return Response({'error': 'Staff number and email are required.'}, status=400)
+        try:
+            staff = Staff.objects.get(staff_number=staff_number, email__iexact=email)
+        except Staff.DoesNotExist:
+            return Response({'error': 'No account found with that staff number and email combination.'}, status=404)
+        temp_pw = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+        staff.set_password(temp_pw)
+        staff.save(update_fields=['password_hash'])
+        from django.core.mail import send_mail
+        from django.conf import settings
+        try:
+            send_mail(
+                subject='MMU Clearance — Staff Password Reset',
+                message=f"""Dear {staff.full_name},
+
+Your staff portal password has been reset.
+
+Temporary Password: {temp_pw}
+
+Please log in and inform the system administrator to update your password.
+
+Login at: https://mmu-student-clearance-system-sm2r.vercel.app/staff/login/
+
+Best regards,
+MMU Clearance System
+""",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[staff.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            return Response({'error': 'Could not send email. Please contact the system administrator.'}, status=500)
+        return Response({'message': f'A temporary password has been sent to {email}. Please check your inbox.'})
+
