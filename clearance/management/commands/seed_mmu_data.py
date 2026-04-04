@@ -93,7 +93,7 @@ class Command(BaseCommand):
             student = Student(
                 first_name='Victor',
                 last_name='Kimutai',
-                email='victor.kimutai@students.mmu.ac.ke',
+                email='vkimu20@gmail.com',
                 phone='+254712345678',
                 admission_year=2020,
                 cohort_number=44,

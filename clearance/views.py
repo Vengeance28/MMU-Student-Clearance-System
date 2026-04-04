@@ -422,16 +422,15 @@ class StudentForgotPasswordView(BaseView):
     """POST /api/auth/student/forgot-password/"""
 
     def post(self, request):
-        from django.contrib.auth.hashers import make_password
         import secrets, string
-        reg_number = request.data.get('reg_number', '').strip()
         email = request.data.get('email', '').strip().lower()
-        if not reg_number or not email:
-            return Response({'error': 'Registration number and email are required.'}, status=400)
+        if not email:
+            return Response({'error': 'Email address is required.'}, status=400)
         try:
-            student = Student.objects.get(reg_number=reg_number, email__iexact=email)
+            student = Student.objects.get(email__iexact=email)
         except Student.DoesNotExist:
-            return Response({'error': 'No account found with that registration number and email combination.'}, status=404)
+            # Security: don't reveal if email exists or not
+            return Response({'message': 'If an account with that email exists, a password reset link has been sent.'})
         # Generate temp password
         temp_pw = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
         student.set_password(temp_pw)
@@ -469,14 +468,13 @@ class StaffForgotPasswordView(BaseView):
 
     def post(self, request):
         import secrets, string
-        staff_number = request.data.get('staff_number', '').strip()
         email = request.data.get('email', '').strip().lower()
-        if not staff_number or not email:
-            return Response({'error': 'Staff number and email are required.'}, status=400)
+        if not email:
+            return Response({'error': 'Email address is required.'}, status=400)
         try:
-            staff = Staff.objects.get(staff_number=staff_number, email__iexact=email)
+            staff = Staff.objects.get(email__iexact=email)
         except Staff.DoesNotExist:
-            return Response({'error': 'No account found with that staff number and email combination.'}, status=404)
+            return Response({'message': 'If an account with that email exists, a password reset link has been sent.'})
         temp_pw = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
         staff.set_password(temp_pw)
         staff.save(update_fields=['password_hash'])
