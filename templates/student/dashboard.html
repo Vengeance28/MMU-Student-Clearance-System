@@ -76,7 +76,7 @@
 <!-- Utility Bar -->
 <div class="utility-bar">
   <div class="container">
-    <span>📞 +254-700-000-000 &nbsp;|&nbsp; ✉️ info@mmu.ac.ke</span>
+    <span>📞 +254 20 2071247 &nbsp;|&nbsp; ✉️ info@mmu.ac.ke</span>
     <a href="mailto:clearance@mmu.ac.ke" class="btn-contact">Contact Clearance Office</a>
   </div>
 </div>
@@ -170,7 +170,6 @@
                 <select id="f-campus">
                   <option>Main Campus</option>
                   <option>Town Campus</option>
-                  <option>Karen Campus</option>
                 </select>
               </div>
               <div class="form-field">
@@ -357,15 +356,18 @@
     document.getElementById('statusView').style.display='none';
     document.getElementById('submitForm').style.display='block';
     document.getElementById('tab-clearance').style.display='block';
-    document.getElementById('f-reg').textContent = profile.reg_number||'—';
-    document.getElementById('f-prog').textContent = (profile.programme_code||'')+'-'+(profile.programme_name||'');
-    document.getElementById('f-name').textContent = (profile.first_name||'')+' '+(profile.last_name||'');
-    document.getElementById('f-faculty').textContent = profile.faculty_name||'—';
-    document.getElementById('f-email').value = profile.email||'';
-    document.getElementById('f-phone').value = profile.phone||'';
+    // Populate read-only fields
+    document.getElementById('f-reg').textContent = profile.reg_number || '—';
+    document.getElementById('f-prog').textContent = (profile.programme_code||'') + ' - ' + (profile.programme_name||'');
+    document.getElementById('f-name').textContent = (profile.first_name||'') + ' ' + (profile.last_name||'');
+    document.getElementById('f-faculty').textContent = profile.faculty_name || '—';
+    // Pre-fill editable fields
+    document.getElementById('f-email').value = profile.email || '';
+    document.getElementById('f-phone').value = profile.phone || '';
+    // Academic year
     const yr = new Date().getFullYear();
-    const mon = new Date().getMonth();
-    document.getElementById('f-year').textContent = mon>=8 ? yr+'/'+(yr+1) : (yr-1)+'/'+yr;
+    const mon = new Date().getMonth(); // 0=Jan, 8=Sep
+    document.getElementById('f-year').textContent = mon >= 8 ? yr+'/'+(yr+1) : (yr-1)+'/'+yr;
   }
 
   async function loadDashboard() {

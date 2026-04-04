@@ -11,7 +11,7 @@
 
 <div class="utility-bar">
   <div class="container">
-    <span>📞 +254-700-000-000 &nbsp;|&nbsp; ✉️ info@mmu.ac.ke</span>
+    <span>📞 +254 20 2071247 &nbsp;|&nbsp; ✉️ info@mmu.ac.ke</span>
     <a href="mailto:clearance@mmu.ac.ke" class="btn-contact">Contact Clearance Office</a>
   </div>
 </div>
@@ -204,6 +204,19 @@
     var badge = document.getElementById('currentStatusBadge');
     badge.className = 'badge ' + getBadgeClass(q.status);
     badge.textContent = q.status;
+
+    // Show proof document if student resubmitted
+    if (q.document_url) {
+      var proofDiv = document.createElement('div');
+      proofDiv.style = 'margin-top:16px;padding:14px;background:#f0f8ff;border:1px solid #c0d8ff;border-radius:8px';
+      proofDiv.innerHTML =
+        '<div style="font-size:0.82rem;font-weight:700;color:var(--mmu-navy);margin-bottom:8px">📎 Student Proof of Resolution</div>' +
+        '<a href="' + q.document_url + '" target="_blank" class="btn btn-secondary btn-sm">View Document</a>' +
+        (q.remarks && q.remarks.indexOf('[RESUBMITTED]')===0
+          ? '<div style="margin-top:8px;font-size:0.82rem;color:#555"><strong>Student note:</strong> ' + q.remarks.replace('[RESUBMITTED]','').trim() + '</div>'
+          : '');
+      document.getElementById('studentInfo').appendChild(proofDiv);
+    }
 
     if (q.status !== 'PENDING') {
       document.getElementById('alreadyActioned').style.display = 'block';
