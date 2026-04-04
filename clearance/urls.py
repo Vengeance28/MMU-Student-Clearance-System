@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     StudentForgotPasswordView, StaffForgotPasswordView,
+    StudentClearanceResubmitView,
     StudentLoginView, StaffLoginView, LogoutView,
     StudentProfileView, StudentClearanceStatusView,
     StudentClearanceSubmitView, StudentCertificateView,
@@ -20,6 +21,7 @@ urlpatterns = [
     path('student/profile/', StudentProfileView.as_view(), name='student-profile'),
     path('student/clearance/status/', StudentClearanceStatusView.as_view(), name='clearance-status'),
     path('student/clearance/submit/', StudentClearanceSubmitView.as_view(), name='clearance-submit'),
+    path('student/clearance/resubmit/', StudentClearanceResubmitView.as_view(), name='clearance-resubmit'),
     path('student/clearance/certificate/', StudentCertificateView.as_view(), name='clearance-certificate'),
     path('student/notifications/', StudentNotificationsView.as_view(), name='student-notifications'),
 

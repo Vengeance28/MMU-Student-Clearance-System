@@ -7,36 +7,73 @@
   <title>My Clearance — MMU</title>
   <link rel="stylesheet" href="{% static 'css/mmu.css' %}">
   <style>
-    .dept-card { transition: transform 0.2s, box-shadow 0.2s; }
-    .dept-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
-    .overall-card {
-      background: white; border-radius: 12px; padding: 24px 28px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 24px;
-      border: 1px solid var(--mmu-border);
+    body { background: #f0f2f8; }
+    /* Sidebar layout */
+    .app-layout { display: flex; min-height: calc(100vh - 110px); }
+    .sidebar {
+      width: 240px; background: var(--mmu-navy); flex-shrink: 0;
+      padding: 20px 0;
     }
-    .stat-row { display: flex; gap: 16px; margin-top: 20px; flex-wrap: wrap; }
-    .stat-box {
-      flex: 1; min-width: 100px; background: var(--mmu-light);
-      border-radius: 8px; padding: 14px 16px; text-align: center;
-      border: 1px solid var(--mmu-border);
+    .sidebar-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px; color: rgba(255,255,255,0.75);
+      font-size: 0.88rem; cursor: pointer; transition: all 0.15s;
+      text-decoration: none; border-left: 3px solid transparent;
     }
-    .stat-box .stat-num { font-size: 1.6rem; font-weight: 800; color: var(--mmu-navy); }
-    .stat-box .stat-label { font-size: 0.75rem; color: #888; margin-top: 2px; }
-    .notif-panel {
-      position: fixed; top: 80px; right: 20px; width: 340px;
-      background: #fff; border: 1px solid var(--mmu-border);
-      border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-      z-index: 200; max-height: 450px; overflow-y: auto; display: none;
+    .sidebar-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .sidebar-item.active { background: rgba(255,255,255,0.12); color: #fff; border-left-color: var(--mmu-red); }
+    .sidebar-icon { font-size: 1.1rem; width: 22px; text-align: center; }
+    .main-area { flex: 1; padding: 28px; overflow-x: hidden; }
+
+    /* Clearance Form Card */
+    .form-card { background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; margin-bottom: 24px; }
+    .form-card-header { background: #f8f9ff; border-bottom: 1px solid var(--mmu-border); padding: 14px 20px; font-size: 1rem; font-weight: 700; color: var(--mmu-navy); }
+    .form-card-body { padding: 24px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .form-field label { display: block; font-size: 0.8rem; font-weight: 600; color: #777; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+    .form-field .field-val { font-size: 0.9rem; font-weight: 600; color: var(--mmu-navy); background: #f0f4ff; border: 1px solid #dce4ff; border-radius: 6px; padding: 9px 14px; }
+    .form-field input, .form-field select { width: 100%; padding: 9px 14px; border: 1px solid var(--mmu-border); border-radius: 6px; font-size: 0.9rem; color: var(--mmu-body); background: #fff; box-sizing: border-box; }
+    .form-field input:focus, .form-field select:focus { outline: none; border-color: var(--mmu-navy); box-shadow: 0 0 0 3px rgba(27,42,107,0.08); }
+    .form-field.full { grid-column: 1 / -1; }
+
+    /* Resubmit proof upload */
+    .proof-upload { border: 2px dashed var(--mmu-border); border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+    .proof-upload:hover { border-color: var(--mmu-navy); }
+    .proof-upload input { display: none; }
+
+    /* Status cards */
+    .dept-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+    .dept-card { background: #fff; border-radius: 10px; border-left: 4px solid #ddd; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .dept-card.CLEARED { border-left-color: var(--mmu-success); }
+    .dept-card.PENDING { border-left-color: var(--mmu-pending); }
+    .dept-card.REJECTED { border-left-color: var(--mmu-danger); }
+    .dept-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .dept-card-name { font-size: 0.88rem; font-weight: 700; color: var(--mmu-navy); }
+    .dept-card-remarks { font-size: 0.8rem; color: #777; line-height: 1.5; margin-top: 6px; }
+    .dept-card-meta { font-size: 0.74rem; color: #bbb; margin-top: 8px; }
+
+    /* Progress */
+    .progress-section { background: #fff; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .overall-status-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+    .status-chip { padding: 5px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+    .status-chip.PENDING { background: rgba(230,81,0,0.1); color: var(--mmu-pending); }
+    .status-chip.IN_PROGRESS { background: rgba(21,101,192,0.1); color: var(--mmu-progress); }
+    .status-chip.COMPLETED { background: rgba(46,125,50,0.1); color: var(--mmu-success); }
+    .status-chip.REJECTED { background: rgba(198,40,40,0.1); color: var(--mmu-danger); }
+
+    @media(max-width:768px){
+      .app-layout{flex-direction:column;}
+      .sidebar{width:100%;display:flex;overflow-x:auto;padding:8px;}
+      .sidebar-item{flex-direction:column;gap:4px;padding:10px 14px;font-size:0.72rem;white-space:nowrap;border-left:none;border-bottom:3px solid transparent;}
+      .sidebar-item.active{border-bottom-color:var(--mmu-red);border-left:none;}
+      .main-area{padding:16px;}
+      .form-grid,.dept-grid{grid-template-columns:1fr;}
     }
-    .notif-item { padding: 12px 16px; border-bottom: 1px solid #f5f5f5; }
-    .notif-item:last-child { border-bottom: none; }
-    .notif-type { font-size: 0.78rem; font-weight: 700; color: var(--mmu-navy); margin-bottom: 3px; }
-    .notif-msg { font-size: 0.8rem; color: #666; line-height: 1.4; }
-    .notif-time { font-size: 0.72rem; color: #bbb; margin-top: 4px; }
   </style>
 </head>
 <body>
 
+<!-- Utility Bar -->
 <div class="utility-bar">
   <div class="container">
     <span>📞 +254-700-000-000 &nbsp;|&nbsp; ✉️ info@mmu.ac.ke</span>
@@ -44,21 +81,18 @@
   </div>
 </div>
 
+<!-- Navbar -->
 <nav class="navbar-mmu">
   <div class="container">
     <a href="/dashboard/" class="navbar-brand">
       <img src="{% static 'images/mmu_logo.png' %}" alt="MMU Logo">
       <div>
         <div class="brand-text">Multimedia University</div>
-        <div class="brand-sub">Clearance System</div>
+        <div class="brand-sub">Student Clearance Portal</div>
       </div>
     </a>
-    <ul class="navbar-nav">
-      <li><a href="/dashboard/" class="active">Dashboard</a></li>
-      <li><a href="/certificate/" id="certNavLink" style="display:none">Certificate</a></li>
-    </ul>
     <div class="navbar-user">
-      <span class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Notifications" style="cursor:pointer;font-size:1.2rem;position:relative">
+      <span class="notif-bell" id="notifBell" onclick="toggleNotifPanel()" title="Notifications" style="cursor:pointer;font-size:1.1rem;position:relative">
         🔔 <span class="notif-count" id="notifCount" style="display:none">0</span>
       </span>
       <span class="user-name" id="navUserName"></span>
@@ -67,277 +101,385 @@
   </div>
 </nav>
 
-<div class="hero">
-  <div class="container">
-    <h1 id="heroTitle">Welcome to MMU Clearance</h1>
-    <p id="heroSub">Track your clearance status in real time across all departments</p>
+<!-- App Layout -->
+<div class="app-layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <a class="sidebar-item" href="/dashboard/" id="nav-dashboard">
+      <span class="sidebar-icon">📊</span> Dashboard
+    </a>
+    <a class="sidebar-item active" href="#" onclick="showTab('clearance');return false" id="nav-clearance">
+      <span class="sidebar-icon">📋</span> Clearance Requisition
+    </a>
+    <a class="sidebar-item" href="/certificate/" id="nav-cert" style="display:none">
+      <span class="sidebar-icon">🎓</span> Clearance Certificate
+    </a>
+    <a class="sidebar-item" href="#" onclick="showTab('notifications');return false" id="nav-notif">
+      <span class="sidebar-icon">🔔</span> Notifications
+      <span id="sideNotifCount" style="margin-left:auto;background:var(--mmu-red);color:#fff;border-radius:10px;padding:1px 7px;font-size:0.7rem;display:none">0</span>
+    </a>
   </div>
-</div>
 
-<div class="container section" id="mainContent">
-  <div id="loadingState" style="text-align:center;padding:60px 0">
-    <div class="spinner" style="width:44px;height:44px;margin:0 auto 16px;border-width:4px"></div>
-    <p style="color:#aaa;font-size:0.9rem">Loading your clearance status…</p>
-  </div>
-
-  <!-- No request state -->
-  <div id="noRequestState" style="display:none">
-    <div style="max-width:560px;margin:0 auto;text-align:center;padding:50px 20px">
-      <div style="width:80px;height:80px;background:rgba(27,42,107,0.08);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:2rem">📋</div>
-      <h2 style="color:var(--mmu-navy);margin-bottom:10px;font-size:1.4rem">Start Your Clearance</h2>
-      <p style="color:#888;margin-bottom:8px;line-height:1.7">Submit your clearance request to begin. All 6 departments will be notified <strong>simultaneously</strong> — no waiting for one to finish before the next begins.</p>
-      <p style="color:#bbb;font-size:0.82rem;margin-bottom:28px">You will receive a confirmation email immediately after submission.</p>
-      <button class="btn btn-primary btn-lg" id="submitBtn" onclick="submitClearanceRequest()">
-        📤 Submit Clearance Request
-      </button>
-      <div id="submitError" class="alert alert-error" style="display:none;margin-top:16px;text-align:left"></div>
+  <!-- Main -->
+  <div class="main-area">
+    <div id="loadingState" style="text-align:center;padding:60px 0">
+      <div class="spinner" style="width:40px;height:40px;margin:0 auto 16px;border-width:3px"></div>
+      <p style="color:#aaa">Loading…</p>
     </div>
-  </div>
 
-  <!-- Dashboard state -->
-  <div id="dashboardState" style="display:none">
-    <!-- Overall Status Card -->
-    <div class="overall-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-        <div>
-          <div style="font-size:0.8rem;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Overall Clearance Status</div>
-          <div id="statusBannerInline" style="font-size:1rem;font-weight:700"></div>
-        </div>
-        <div id="certBtnWrap" style="display:none">
-          <a href="/certificate/" class="btn btn-success">🎓 Download Certificate</a>
-        </div>
-      </div>
+    <!-- CLEARANCE TAB -->
+    <div id="tab-clearance" style="display:none">
 
-      <!-- Progress Bar -->
-      <div class="progress-wrap" style="margin-top:16px;margin-bottom:0">
-        <div class="progress-label">
-          <span id="progressLabel">Clearance Progress</span>
-          <span id="progressText" style="font-weight:700;color:var(--mmu-navy)">0 / 6</span>
-        </div>
-        <div class="progress-bar-outer" style="height:12px">
-          <div class="progress-bar-inner" id="progressBar" style="width:0%"></div>
-        </div>
-      </div>
-
-      <!-- Stats Row -->
-      <div class="stat-row">
-        <div class="stat-box">
-          <div class="stat-num" id="statCleared" style="color:var(--mmu-success)">0</div>
-          <div class="stat-label">Cleared</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-num" id="statPending" style="color:var(--mmu-pending)">0</div>
-          <div class="stat-label">Pending</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-num" id="statRejected" style="color:var(--mmu-danger)">0</div>
-          <div class="stat-label">Rejected</div>
-        </div>
-        <div class="stat-box" style="flex:2">
-          <div class="refresh-bar" style="justify-content:center;margin-bottom:0">
-            <div class="refresh-dot live"></div>
-            <span style="font-size:0.78rem;color:#888">Auto-refresh every 30s</span>
-            <span id="lastRefreshed" style="font-size:0.72rem;color:#bbb;margin-left:8px"></span>
+      <!-- Not yet submitted -->
+      <div id="submitForm" style="display:none">
+        <div class="form-card">
+          <div class="form-card-header">📋 Clearance Form</div>
+          <div class="form-card-body">
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Registration No</label>
+                <div class="field-val" id="f-reg"></div>
+              </div>
+              <div class="form-field">
+                <label>Current Programme</label>
+                <div class="field-val" id="f-prog"></div>
+              </div>
+              <div class="form-field">
+                <label>Full Name</label>
+                <div class="field-val" id="f-name"></div>
+              </div>
+              <div class="form-field">
+                <label>Faculty</label>
+                <div class="field-val" id="f-faculty"></div>
+              </div>
+              <div class="form-field">
+                <label>Personal Email <span style="color:var(--mmu-danger)">*</span></label>
+                <input type="email" id="f-email" placeholder="Enter your personal email address">
+                <div style="font-size:0.75rem;color:#aaa;margin-top:4px">This email will be used for all clearance communications and your final certificate.</div>
+              </div>
+              <div class="form-field">
+                <label>Telephone Number</label>
+                <input type="tel" id="f-phone" placeholder="e.g. +254712345678">
+              </div>
+              <div class="form-field">
+                <label>Address</label>
+                <input type="text" id="f-address" placeholder="Your current address">
+              </div>
+              <div class="form-field">
+                <label>Campus</label>
+                <select id="f-campus">
+                  <option>Main Campus</option>
+                  <option>Town Campus</option>
+                  <option>Karen Campus</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Academic Year</label>
+                <div class="field-val" id="f-year"></div>
+              </div>
+            </div>
+            <div id="submitError" class="alert alert-error" style="display:none;margin-top:16px"></div>
+            <div style="text-align:center;margin-top:28px">
+              <button class="btn btn-primary btn-lg" id="submitBtn" onclick="submitClearance()">
+                Submit Clearance Request
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- After submission: status view -->
+      <div id="statusView" style="display:none">
+        <!-- Progress -->
+        <div class="progress-section">
+          <div class="overall-status-row">
+            <div>
+              <div style="font-size:0.75rem;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Overall Status</div>
+              <div id="overallStatusChip"></div>
+            </div>
+            <div id="certBtnWrap" style="display:none">
+              <a href="/certificate/" class="btn btn-success">🎓 Download Certificate</a>
+            </div>
+            <div style="font-size:0.78rem;color:#aaa">
+              <span class="refresh-dot live" style="display:inline-block;margin-right:4px"></span>
+              Auto-refresh every 30s &nbsp;·&nbsp; <span id="lastRefresh"></span>
+            </div>
+          </div>
+          <div class="progress-bar-outer" style="height:10px">
+            <div class="progress-bar-inner" id="progressBar" style="width:0%"></div>
+          </div>
+          <div style="font-size:0.8rem;color:#888;margin-top:8px" id="progressLabel">0 of 6 departments cleared</div>
+        </div>
+
+        <!-- Resubmit panel (shown when REJECTED) -->
+        <div id="resubmitPanel" style="display:none">
+          <div class="form-card" style="border:2px solid var(--mmu-danger)">
+            <div class="form-card-header" style="background:#fff5f5;color:var(--mmu-danger)">
+              ⚠️ Action Required — Resubmit Clearance
+            </div>
+            <div class="form-card-body">
+              <p style="color:#666;margin-bottom:16px;font-size:0.88rem;line-height:1.7">
+                One or more departments have rejected your request. Please review the remarks below, resolve the issues, and resubmit with supporting proof of resolution.
+              </p>
+              <div class="form-field" style="margin-bottom:16px">
+                <label>Proof of Resolution <span style="color:var(--mmu-danger)">*</span></label>
+                <div class="proof-upload" onclick="document.getElementById('proofFile').click()">
+                  <input type="file" id="proofFile" accept=".pdf,.jpg,.jpeg,.png" onchange="updateProofLabel()">
+                  <div id="proofLabel">
+                    <div style="font-size:1.5rem;margin-bottom:6px">📎</div>
+                    <div style="font-size:0.85rem;color:#888">Click to upload proof (receipt, payment slip, etc.)</div>
+                    <div style="font-size:0.75rem;color:#bbb;margin-top:4px">PDF, JPEG or PNG</div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-field" style="margin-bottom:16px">
+                <label>Message to Department (optional)</label>
+                <textarea id="resubmitNote" rows="3" style="width:100%;padding:10px 14px;border:1px solid var(--mmu-border);border-radius:6px;font-size:0.88rem;box-sizing:border-box" placeholder="Briefly explain what you have resolved…"></textarea>
+              </div>
+              <div id="resubmitError" class="alert alert-error" style="display:none;margin-bottom:12px"></div>
+              <button class="btn btn-primary" id="resubmitBtn" onclick="doResubmit()">📤 Resubmit Clearance Request</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dept Cards -->
+        <div style="font-size:0.95rem;font-weight:700;color:var(--mmu-navy);margin-bottom:14px">Department Clearance Status</div>
+        <div class="dept-grid" id="deptGrid"></div>
+      </div>
     </div>
 
-    <!-- Department Cards -->
-    <div class="section-title" style="margin-bottom:16px">
-      Department Clearance Status
-      <span style="font-size:0.8rem;font-weight:400;color:#aaa;margin-left:8px">Click a card to see details</span>
+    <!-- NOTIFICATIONS TAB -->
+    <div id="tab-notifications" style="display:none">
+      <div class="form-card">
+        <div class="form-card-header">🔔 Notifications</div>
+        <div id="notifTabList" style="padding:8px"></div>
+      </div>
     </div>
-    <div class="grid-6" id="deptGrid"></div>
   </div>
 </div>
 
-<!-- Notification Panel -->
-<div class="notif-panel" id="notifPanel">
+<!-- Floating Notification Panel -->
+<div id="notifPanel" style="display:none;position:fixed;top:80px;right:20px;width:340px;background:#fff;border:1px solid var(--mmu-border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:200;max-height:420px;overflow-y:auto">
   <div style="padding:14px 16px;border-bottom:1px solid var(--mmu-border);font-weight:700;color:var(--mmu-navy);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff">
     <span>🔔 Notifications</span>
-    <span onclick="toggleNotifPanel()" style="cursor:pointer;color:#aaa;font-size:1.1rem">✕</span>
+    <span onclick="toggleNotifPanel()" style="cursor:pointer;color:#aaa">✕</span>
   </div>
   <div id="notifList" style="padding:8px"></div>
 </div>
 
 <script>
   const API = '/api';
-  let pollTimer = null;
-  let notifOpen = false;
+  let pollTimer = null, notifOpen = false, currentData = null;
 
   function getToken() { return localStorage.getItem('mmu_token'); }
   function getUser()  { return JSON.parse(localStorage.getItem('mmu_user') || 'null'); }
-  function authHeaders() { return { 'Authorization': 'Token ' + getToken(), 'Content-Type': 'application/json' }; }
+  function authHdr()  { return {'Authorization':'Token '+getToken(),'Content-Type':'application/json'}; }
 
   if (!getToken()) window.location.href = '/login/';
-
   const user = getUser();
-  if (user) {
-    document.getElementById('navUserName').textContent = user.name || user.reg_number;
-    document.getElementById('heroTitle').textContent = 'Welcome, ' + (user.name || user.reg_number);
-    document.getElementById('heroSub').textContent = (user.reg_number || '') + ' — Real-Time Clearance Dashboard';
-  }
+  if (user) document.getElementById('navUserName').textContent = user.name || user.reg_number;
 
   async function handleLogout() {
-    await fetch(API + '/auth/logout/', { method:'POST', headers: authHeaders() }).catch(()=>{});
+    await fetch(API+'/auth/logout/',{method:'POST',headers:authHdr()}).catch(()=>{});
     localStorage.removeItem('mmu_token'); localStorage.removeItem('mmu_user');
-    window.location.href = '/login/';
+    window.location.href='/login/';
   }
 
-  const DEPT_ICONS = { LIBRARY:'📚', FINANCE:'💰', HOSTELS:'🏠', FACULTY:'🎓', ICT:'💻', REGISTRY:'📋' };
-  const STATUS_COLORS = { CLEARED: 'var(--mmu-success)', PENDING: 'var(--mmu-pending)', REJECTED: 'var(--mmu-danger)' };
-
-  function getBadgeClass(s) {
-    return { PENDING:'badge-pending', CLEARED:'badge-cleared', REJECTED:'badge-rejected' }[s] || 'badge-pending';
+  function showTab(tab) {
+    ['clearance','notifications'].forEach(t => {
+      document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
+      document.getElementById('nav-'+t).classList.toggle('active', t===tab);
+    });
+    if (tab==='notifications') loadNotifTab();
   }
 
-  function renderDeptCard(ds) {
-    const icon = DEPT_ICONS[ds.department_code] || '🏢';
-    const ts = ds.updated_at ? new Date(ds.updated_at).toLocaleString('en-KE', {dateStyle:'medium', timeStyle:'short'}) : '—';
-    const staffLine = ds.cleared_by_name
-      ? '<div class="dept-meta" style="margin-top:6px">👤 ' + ds.cleared_by_name + '</div>'
-      : '';
-    const remarksLine = ds.remarks
-      ? '<div class="dept-remarks">' + ds.remarks + '</div>'
-      : '<div class="dept-remarks" style="color:#ccc;font-style:italic">Awaiting review</div>';
-
-    return `
-      <div class="card dept-card status-${ds.status}" style="cursor:default">
-        <div class="card-body" style="padding:20px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-size:1.6rem">${icon}</div>
-            <span class="badge ${getBadgeClass(ds.status)}">${ds.status}</span>
-          </div>
-          <div class="dept-name" style="font-size:0.95rem;margin-bottom:6px">${ds.department_name}</div>
-          ${remarksLine}
-          ${staffLine}
-          <div class="dept-meta" style="margin-top:8px">🕐 ${ts}</div>
-        </div>
-      </div>`;
+  const ICONS = {LIBRARY:'📚',FINANCE:'💰',HOSTELS:'🏠',FACULTY:'🎓',ICT:'💻',REGISTRY:'📋'};
+  function badge(s) {
+    const map={PENDING:'badge-pending',CLEARED:'badge-cleared',REJECTED:'badge-rejected'};
+    return '<span class="badge '+(map[s]||'badge-pending')+'">'+s+'</span>';
   }
 
-  function renderDashboard(data) {
-    document.getElementById('loadingState').style.display = 'none';
-    document.getElementById('noRequestState').style.display = 'none';
-    document.getElementById('dashboardState').style.display = 'block';
+  function renderStatus(data) {
+    document.getElementById('loadingState').style.display='none';
+    document.getElementById('submitForm').style.display='none';
+    document.getElementById('statusView').style.display='block';
+    document.getElementById('tab-clearance').style.display='block';
+    currentData = data;
 
-    const depts = data.dept_statuses || [];
-    const cleared = depts.filter(d => d.status === 'CLEARED').length;
-    const pending = depts.filter(d => d.status === 'PENDING').length;
-    const rejected = depts.filter(d => d.status === 'REJECTED').length;
-    const total = depts.length || 6;
-    const pct = Math.round((cleared / total) * 100);
+    const depts = data.dept_statuses||[];
+    const cleared = depts.filter(d=>d.status==='CLEARED').length;
+    const pct = Math.round((cleared/6)*100);
+    document.getElementById('progressBar').style.width=pct+'%';
+    document.getElementById('progressLabel').textContent=cleared+' of 6 departments cleared';
+    document.getElementById('lastRefresh').textContent='Updated: '+new Date().toLocaleTimeString('en-KE');
 
-    // Stats
-    document.getElementById('statCleared').textContent = cleared;
-    document.getElementById('statPending').textContent = pending;
-    document.getElementById('statRejected').textContent = rejected;
-    document.getElementById('progressBar').style.width = pct + '%';
-    document.getElementById('progressText').textContent = cleared + ' / ' + total;
-    document.getElementById('progressLabel').textContent = pct + '% Complete — ' + cleared + ' of ' + total + ' departments cleared';
-
-    // Status inline
-    const statusEl = document.getElementById('statusBannerInline');
-    const statusMap = {
-      PENDING: { icon: '⏳', text: 'Submitted — awaiting departmental review', color: 'var(--mmu-pending)' },
-      IN_PROGRESS: { icon: '🔄', text: 'In Progress — departments are reviewing your request', color: 'var(--mmu-progress)' },
-      COMPLETED: { icon: '🎉', text: 'Clearance Complete — all departments approved!', color: 'var(--mmu-success)' },
-      REJECTED: { icon: '⚠️', text: 'Action Required — check department remarks below', color: 'var(--mmu-danger)' },
+    const statusMap={
+      PENDING:{text:'⏳ Pending Review',cls:'PENDING'},
+      IN_PROGRESS:{text:'🔄 In Progress',cls:'IN_PROGRESS'},
+      COMPLETED:{text:'✅ Clearance Complete',cls:'COMPLETED'},
+      REJECTED:{text:'⚠️ Action Required',cls:'REJECTED'},
     };
-    const s = statusMap[data.overall_status] || statusMap.PENDING;
-    statusEl.innerHTML = '<span style="color:' + s.color + '">' + s.icon + ' ' + s.text + '</span>';
+    const s = statusMap[data.overall_status]||statusMap.PENDING;
+    document.getElementById('overallStatusChip').innerHTML='<span class="status-chip '+s.cls+'">'+s.text+'</span>';
 
     // Certificate button
-    if (data.overall_status === 'COMPLETED') {
-      document.getElementById('certBtnWrap').style.display = 'block';
-      document.getElementById('certNavLink').style.display = 'block';
+    if (data.overall_status==='COMPLETED') {
+      document.getElementById('certBtnWrap').style.display='block';
+      document.getElementById('nav-cert').style.display='flex';
     }
+
+    // Resubmit panel
+    document.getElementById('resubmitPanel').style.display =
+      data.overall_status==='REJECTED' ? 'block' : 'none';
 
     // Dept cards
-    const ordered = ['LIBRARY','FINANCE','HOSTELS','FACULTY','ICT','REGISTRY'];
-    const sorted = [...depts].sort((a,b) => ordered.indexOf(a.department_code) - ordered.indexOf(b.department_code));
-    document.getElementById('deptGrid').innerHTML = sorted.map(renderDeptCard).join('');
-
-    // Last refresh
-    document.getElementById('lastRefreshed').textContent = new Date().toLocaleTimeString('en-KE');
+    const ordered=['LIBRARY','FINANCE','HOSTELS','FACULTY','ICT','REGISTRY'];
+    const sorted=[...depts].sort((a,b)=>ordered.indexOf(a.department_code)-ordered.indexOf(b.department_code));
+    document.getElementById('deptGrid').innerHTML = sorted.map(ds=>`
+      <div class="dept-card ${ds.status}">
+        <div class="dept-card-top">
+          <div>
+            <div style="font-size:1.3rem;margin-bottom:4px">${ICONS[ds.department_code]||'🏢'}</div>
+            <div class="dept-card-name">${ds.department_name}</div>
+          </div>
+          ${badge(ds.status)}
+        </div>
+        <div class="dept-card-remarks">${ds.remarks||'<span style="color:#ddd;font-style:italic">Awaiting review</span>'}</div>
+        <div class="dept-card-meta">
+          ${ds.cleared_by_name?'👤 '+ds.cleared_by_name+'<br>':''}
+          🕐 ${ds.updated_at?new Date(ds.updated_at).toLocaleString('en-KE',{dateStyle:'medium',timeStyle:'short'}):'—'}
+        </div>
+      </div>`).join('');
   }
 
-  async function fetchStatus() {
-    try {
-      const res = await fetch(API + '/student/clearance/status/', { headers: authHeaders() });
-      if (res.status === 401) { window.location.href = '/login/'; return; }
-      if (res.status === 404) {
-        document.getElementById('loadingState').style.display = 'none';
-        document.getElementById('noRequestState').style.display = 'block';
-        return;
-      }
-      const data = await res.json();
-      renderDashboard(data);
-    } catch(e) { console.error(e); }
+  function renderSubmitForm(profile) {
+    document.getElementById('loadingState').style.display='none';
+    document.getElementById('statusView').style.display='none';
+    document.getElementById('submitForm').style.display='block';
+    document.getElementById('tab-clearance').style.display='block';
+    document.getElementById('f-reg').textContent = profile.reg_number||'—';
+    document.getElementById('f-prog').textContent = (profile.programme_code||'')+'-'+(profile.programme_name||'');
+    document.getElementById('f-name').textContent = (profile.first_name||'')+' '+(profile.last_name||'');
+    document.getElementById('f-faculty').textContent = profile.faculty_name||'—';
+    document.getElementById('f-email').value = profile.email||'';
+    document.getElementById('f-phone').value = profile.phone||'';
+    const yr = new Date().getFullYear();
+    const mon = new Date().getMonth();
+    document.getElementById('f-year').textContent = mon>=8 ? yr+'/'+(yr+1) : (yr-1)+'/'+yr;
   }
 
-  async function submitClearanceRequest() {
-    const btn = document.getElementById('submitBtn');
-    const errEl = document.getElementById('submitError');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px"></span> Submitting…';
-    errEl.style.display = 'none';
+  async function loadDashboard() {
     try {
-      const res = await fetch(API + '/student/clearance/submit/', {
-        method:'POST', headers: authHeaders(), body: JSON.stringify({})
-      });
-      const data = await res.json();
-      if (res.ok) {
-        renderDashboard(data);
-        startPolling();
+      const [profileRes, statusRes] = await Promise.all([
+        fetch(API+'/student/profile/',{headers:authHdr()}),
+        fetch(API+'/student/clearance/status/',{headers:authHdr()})
+      ]);
+      if (profileRes.status===401||statusRes.status===401) { window.location.href='/login/'; return; }
+      const profile = await profileRes.json();
+
+      if (statusRes.status===404) {
+        renderSubmitForm(profile);
       } else {
-        errEl.textContent = data.error || 'Submission failed. Please try again.';
-        errEl.style.display = 'block';
-        btn.disabled = false;
-        btn.innerHTML = '📤 Submit Clearance Request';
+        const data = await statusRes.json();
+        renderStatus(data);
       }
-    } catch(e) {
-      errEl.textContent = 'Network error. Please try again.';
-      errEl.style.display = 'block';
-      btn.disabled = false;
-      btn.innerHTML = '📤 Submit Clearance Request';
-    }
+    } catch(e) { console.error(e); }
+    showTab('clearance');
+  }
+
+  async function submitClearance() {
+    const btn=document.getElementById('submitBtn');
+    const email=document.getElementById('f-email').value.trim();
+    const phone=document.getElementById('f-phone').value.trim();
+    document.getElementById('submitError').style.display='none';
+    if(!email){document.getElementById('submitError').textContent='Personal email is required.';document.getElementById('submitError').style.display='block';return;}
+    btn.disabled=true; btn.innerHTML='<span class="spinner" style="width:16px;height:16px;border-width:2px"></span> Submitting…';
+    try {
+      const res=await fetch(API+'/student/clearance/submit/',{
+        method:'POST', headers:authHdr(),
+        body:JSON.stringify({personal_email:email,phone:phone,campus:document.getElementById('f-campus').value,address:document.getElementById('f-address').value})
+      });
+      const data=await res.json();
+      if(res.ok){ renderStatus(data); startPolling(); }
+      else { document.getElementById('submitError').textContent=data.error||'Submission failed.'; document.getElementById('submitError').style.display='block'; btn.disabled=false; btn.innerHTML='Submit Clearance Request'; }
+    } catch(e){ document.getElementById('submitError').textContent='Network error.'; document.getElementById('submitError').style.display='block'; btn.disabled=false; btn.innerHTML='Submit Clearance Request'; }
+  }
+
+  function updateProofLabel() {
+    const file=document.getElementById('proofFile').files[0];
+    if(file) document.getElementById('proofLabel').innerHTML='<div style="font-size:1.2rem">✅</div><div style="font-size:0.85rem;color:var(--mmu-success);font-weight:600">'+file.name+'</div>';
+  }
+
+  async function doResubmit() {
+    const btn=document.getElementById('resubmitBtn');
+    const file=document.getElementById('proofFile').files[0];
+    const note=document.getElementById('resubmitNote').value.trim();
+    document.getElementById('resubmitError').style.display='none';
+    if(!file){document.getElementById('resubmitError').textContent='Please upload proof of resolution before resubmitting.';document.getElementById('resubmitError').style.display='block';return;}
+    btn.disabled=true; btn.innerHTML='<span class="spinner" style="width:16px;height:16px;border-width:2px"></span> Resubmitting…';
+    try {
+      const fd=new FormData();
+      fd.append('proof_document',file);
+      if(note) fd.append('note',note);
+      const res=await fetch(API+'/student/clearance/resubmit/',{
+        method:'POST',
+        headers:{'Authorization':'Token '+getToken()},
+        body:fd
+      });
+      const data=await res.json();
+      if(res.ok){ renderStatus(data); }
+      else { document.getElementById('resubmitError').textContent=data.error||'Resubmit failed.'; document.getElementById('resubmitError').style.display='block'; btn.disabled=false; btn.innerHTML='📤 Resubmit Clearance Request'; }
+    } catch(e){ document.getElementById('resubmitError').textContent='Network error.'; document.getElementById('resubmitError').style.display='block'; btn.disabled=false; btn.innerHTML='📤 Resubmit Clearance Request'; }
+  }
+
+  function renderNotifItems(data, containerId) {
+    const el=document.getElementById(containerId);
+    if(!data.length){el.innerHTML='<p style="color:#ccc;text-align:center;padding:28px;font-size:0.85rem">No notifications yet</p>';return;}
+    el.innerHTML=data.map(n=>`
+      <div style="padding:12px 16px;border-bottom:1px solid #f5f5f5">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--mmu-navy);margin-bottom:3px">${n.type.replace(/_/g,' ')}</div>
+        <div style="font-size:0.82rem;color:#666;line-height:1.5;white-space:pre-line">${n.message.substring(0,200)}…</div>
+        <div style="font-size:0.72rem;color:#bbb;margin-top:5px">${new Date(n.sent_at).toLocaleString('en-KE')}</div>
+      </div>`).join('');
   }
 
   async function loadNotifications() {
     try {
-      const res = await fetch(API + '/student/notifications/', { headers: authHeaders() });
-      const data = await res.json();
-      const count = data.length;
-      const countEl = document.getElementById('notifCount');
-      if (count > 0) { countEl.textContent = count > 9 ? '9+' : count; countEl.style.display = 'flex'; }
-      const list = document.getElementById('notifList');
-      if (!data.length) {
-        list.innerHTML = '<p style="color:#ccc;text-align:center;padding:24px;font-size:0.82rem">No notifications yet</p>';
-        return;
-      }
-      list.innerHTML = data.slice(0, 20).map(n => `
-        <div class="notif-item">
-          <div class="notif-type">${n.type.replace(/_/g,' ')}</div>
-          <div class="notif-msg">${n.message.substring(0,150)}…</div>
-          <div class="notif-time">${new Date(n.sent_at).toLocaleString('en-KE')}</div>
-        </div>`).join('');
-    } catch(e) {}
+      const res=await fetch(API+'/student/notifications/',{headers:authHdr()});
+      const data=await res.json();
+      const count=data.length;
+      const c=document.getElementById('notifCount');
+      const sc=document.getElementById('sideNotifCount');
+      if(count>0){c.textContent=count>9?'9+':count;c.style.display='flex';sc.textContent=count>9?'9+':count;sc.style.display='inline';}
+      renderNotifItems(data,'notifList');
+    } catch(e){}
   }
 
-  function toggleNotifPanel() {
-    notifOpen = !notifOpen;
-    document.getElementById('notifPanel').style.display = notifOpen ? 'block' : 'none';
-    if (notifOpen) loadNotifications();
+  async function loadNotifTab() {
+    try {
+      const res=await fetch(API+'/student/notifications/',{headers:authHdr()});
+      const data=await res.json();
+      renderNotifItems(data,'notifTabList');
+    } catch(e){}
   }
 
-  function startPolling() {
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(fetchStatus, 30000);
+  function toggleNotifPanel(){
+    notifOpen=!notifOpen;
+    document.getElementById('notifPanel').style.display=notifOpen?'block':'none';
+    if(notifOpen) loadNotifications();
   }
 
-  fetchStatus().then(() => startPolling());
+  function startPolling(){
+    if(pollTimer) clearInterval(pollTimer);
+    pollTimer=setInterval(async()=>{
+      try{
+        const res=await fetch(API+'/student/clearance/status/',{headers:authHdr()});
+        if(res.ok){const d=await res.json();renderStatus(d);}
+      }catch(e){}
+    },30000);
+  }
+
+  loadDashboard().then(()=>startPolling());
   loadNotifications();
 </script>
 </body>

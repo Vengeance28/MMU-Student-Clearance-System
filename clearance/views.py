@@ -504,3 +504,68 @@ MMU Clearance System
             return Response({'error': 'Could not send email. Please contact the system administrator.'}, status=500)
         return Response({'message': f'A temporary password has been sent to {email}. Please check your inbox.'})
 
+
+class StudentClearanceResubmitView(BaseView):
+    """POST /api/student/clearance/resubmit/ — resubmit after rejection with proof"""
+    permission_classes = [IsStudent]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request):
+        student = request.student
+        try:
+            clearance_req = ClearanceRequest.objects.get(student=student)
+        except ClearanceRequest.DoesNotExist:
+            return Response({'error': 'No clearance request found.'}, status=404)
+
+        if clearance_req.overall_status != 'REJECTED':
+            return Response({'error': 'Only rejected clearance requests can be resubmitted.'}, status=400)
+
+        proof_document = request.FILES.get('proof_document', None)
+        note = request.data.get('note', '').strip()
+
+        if not proof_document:
+            return Response({'error': 'Proof of resolution document is required.'}, status=400)
+
+        # Reset all REJECTED dept statuses back to PENDING, attach proof to rejected ones
+        rejected_depts = clearance_req.dept_statuses.filter(status='REJECTED')
+        for ds in rejected_depts:
+            ds.status = 'PENDING'
+            ds.document = proof_document
+            ds.remarks = f'[RESUBMITTED] {note}' if note else '[Student resubmitted with proof of resolution]'
+            ds.cleared_by = None
+            ds.save()
+
+        # Reset overall status
+        clearance_req.overall_status = 'IN_PROGRESS'
+        clearance_req.completed_date = None
+        clearance_req.save(update_fields=['overall_status', 'completed_date'])
+
+        # Notify student
+        from .emails import _send_and_log
+        _send_and_log(
+            student=student,
+            clearance_request=clearance_req,
+            subject='Clearance Resubmitted — MMU',
+            message=f"""Dear {student.full_name},
+
+Your clearance request has been resubmitted successfully.
+
+The departments that previously rejected your request have been notified and will review your proof of resolution.
+
+Registration Number: {student.reg_number}
+Status: IN PROGRESS
+
+You can track your status at your clearance dashboard.
+
+Best regards,
+MMU Clearance System
+""",
+            notif_type='REQUEST_SUBMITTED',
+        )
+
+        clearance_req.refresh_from_db()
+        data = ClearanceRequest.objects.prefetch_related(
+            'dept_statuses__department', 'dept_statuses__cleared_by'
+        ).get(pk=clearance_req.pk)
+        serializer = ClearanceStatusSerializer(data, context={'request': request})
+        return Response(serializer.data)
