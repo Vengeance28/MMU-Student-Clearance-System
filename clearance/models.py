@@ -254,3 +254,25 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification to {self.student.reg_number}: {self.type} ({self.status})"
+
+
+class AuthToken(models.Model):
+    """Database-backed auth tokens — works on Vercel serverless (no shared cache)."""
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE,
+        null=True, blank=True, related_name='auth_tokens'
+    )
+    staff = models.ForeignKey(
+        Staff, on_delete=models.CASCADE,
+        null=True, blank=True, related_name='auth_tokens'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'auth_token'
+
+    def __str__(self):
+        owner = self.student or self.staff
+        return f"Token for {owner} (expires {self.expires_at})"

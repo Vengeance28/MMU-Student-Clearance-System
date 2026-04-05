@@ -1,56 +1,74 @@
 """
-Simple token store backed by Django's cache.
-Tokens are 40-char hex strings, valid for 24 hours.
+Token store backed by the database — works reliably on Vercel serverless.
+Each token is stored as a row in the AuthToken table.
 """
 import secrets
-from django.core.cache import cache
-
-STUDENT_TOKEN_PREFIX = 'student_token:'
-STAFF_TOKEN_PREFIX = 'staff_token:'
-TOKEN_TTL = 86400  # 24 hours
+from django.utils import timezone
+from datetime import timedelta
 
 
 def generate_token():
-    return secrets.token_hex(20)
+    return secrets.token_hex(32)
 
 
 def create_student_token(student):
+    from .models import AuthToken
+    # Remove any existing tokens for this student
+    AuthToken.objects.filter(student=student).delete()
     token = generate_token()
-    cache.set(f"{STUDENT_TOKEN_PREFIX}{token}", student.pk, TOKEN_TTL)
+    AuthToken.objects.create(
+        token=token,
+        student=student,
+        staff=None,
+        expires_at=timezone.now() + timedelta(hours=24)
+    )
     return token
 
 
 def create_staff_token(staff):
+    from .models import AuthToken
+    AuthToken.objects.filter(staff=staff).delete()
     token = generate_token()
-    cache.set(f"{STAFF_TOKEN_PREFIX}{token}", staff.pk, TOKEN_TTL)
+    AuthToken.objects.create(
+        token=token,
+        student=None,
+        staff=staff,
+        expires_at=timezone.now() + timedelta(hours=24)
+    )
     return token
 
 
 def get_student_by_token(token):
-    from .models import Student
-    student_id = cache.get(f"{STUDENT_TOKEN_PREFIX}{token}")
-    if student_id is None:
-        return None
+    from .models import AuthToken
     try:
-        return Student.objects.select_related('programme__faculty').get(pk=student_id)
-    except Student.DoesNotExist:
+        t = AuthToken.objects.select_related('student__programme__faculty').get(
+            token=token,
+            student__isnull=False,
+            expires_at__gt=timezone.now()
+        )
+        return t.student
+    except AuthToken.DoesNotExist:
         return None
 
 
 def get_staff_by_token(token):
-    from .models import Staff
-    staff_id = cache.get(f"{STAFF_TOKEN_PREFIX}{token}")
-    if staff_id is None:
-        return None
+    from .models import AuthToken
     try:
-        return Staff.objects.select_related('department').get(pk=staff_id, is_active=True)
-    except Staff.DoesNotExist:
+        t = AuthToken.objects.select_related('staff__department').get(
+            token=token,
+            staff__isnull=False,
+            expires_at__gt=timezone.now()
+        )
+        return t.staff if t.staff.is_active else None
+    except AuthToken.DoesNotExist:
         return None
 
 
 def delete_student_token(token):
-    cache.delete(f"{STUDENT_TOKEN_PREFIX}{token}")
+    from .models import AuthToken
+    AuthToken.objects.filter(token=token, student__isnull=False).delete()
 
 
 def delete_staff_token(token):
-    cache.delete(f"{STAFF_TOKEN_PREFIX}{token}")
+    from .models import AuthToken
+    AuthToken.objects.filter(token=token, staff__isnull=False).delete()

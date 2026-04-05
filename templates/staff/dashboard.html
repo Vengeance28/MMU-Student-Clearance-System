@@ -91,14 +91,17 @@
   function getUser()  { return JSON.parse(localStorage.getItem('mmu_user') || 'null'); }
   function authHeaders() { return { 'Authorization': `Token ${getToken()}` }; }
 
-  if (!getToken()) window.location.href = '/staff/login/';
-
-  const user = getUser();
-  if (user) {
-    if (!user.staff_number) window.location.href = '/staff/login/';
-    document.getElementById('navUserName').textContent = `${user.name} (${user.department_code || user.department})`;
-    document.getElementById('heroTitle').textContent = `${user.department} — Clearance Queue`;
-    document.getElementById('heroSub').textContent = `Logged in as: ${user.name} (${user.staff_number})`;
+  // Validate session on load
+  const _token = getToken();
+  const _user = getUser();
+  if (!_token || !_user || !_user.staff_number) {
+    localStorage.removeItem('mmu_token');
+    localStorage.removeItem('mmu_user');
+    window.location.href = '/staff/login/';
+  } else {
+    document.getElementById('navUserName').textContent = `${_user.name} (${_user.department_code || _user.department})`;
+    document.getElementById('heroTitle').textContent = `${_user.department} — Clearance Queue`;
+    document.getElementById('heroSub').textContent = `Logged in as: ${_user.name} (${_user.staff_number})`;
   }
 
   async function handleLogout() {

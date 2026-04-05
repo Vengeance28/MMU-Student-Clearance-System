@@ -73,8 +73,17 @@
 </div>
 
 <script>
-  const ex = JSON.parse(localStorage.getItem('mmu_user')||'{}');
-  if (localStorage.getItem('mmu_token') && ex.staff_number) window.location.href='/staff/dashboard/';
+  // Only redirect if we have both a token AND confirmed staff user
+  try {
+    const ex = JSON.parse(localStorage.getItem('mmu_user') || '{}');
+    const tk = localStorage.getItem('mmu_token');
+    if (tk && ex && ex.staff_number && ex.role) {
+      window.location.href = '/staff/dashboard/';
+    }
+  } catch(e) {
+    localStorage.removeItem('mmu_token');
+    localStorage.removeItem('mmu_user');
+  }
   document.getElementById('password').addEventListener('keypress',e=>{ if(e.key==='Enter') doLogin(); });
   document.getElementById('forgotEmail').addEventListener('keypress',e=>{ if(e.key==='Enter') doForgot(); });
 
