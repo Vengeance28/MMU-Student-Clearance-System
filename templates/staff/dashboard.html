@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="{% static 'css/mmu.css' %}">
 </head>
 <body>
+<script src="{% static 'js/auth.js' %}"></script>
+<script>if (!MMUAuth.requireStaff()) { throw new Error('not auth'); }</script>
 
 <div class="utility-bar">
   <div class="container">
@@ -15,23 +17,19 @@
     <a href="mailto:clearance@mmu.ac.ke" class="btn-contact">Contact Clearance Office</a>
   </div>
 </div>
-
 <nav class="navbar-mmu">
   <div class="container">
     <a href="/staff/dashboard/" class="navbar-brand">
       <img src="{% static 'images/mmu_logo.png' %}" alt="MMU Logo">
-      <div>
-        <div class="brand-text">Multimedia University</div>
-        <div class="brand-sub">Clearance System — Staff</div>
-      </div>
+      <div><div class="brand-text">Multimedia University</div><div class="brand-sub">Clearance System — Staff</div></div>
     </a>
     <ul class="navbar-nav">
-      <li><a href="/staff/dashboard/" class="active">Queue</a></li>
-      <li><a href="#" onclick="loadTab('history');return false">History</a></li>
+      <li><a href="/staff/dashboard/" class="active" id="tabQueueLink">Queue</a></li>
+      <li><a href="#" id="tabHistoryLink" onclick="setTab('history');return false">History</a></li>
     </ul>
     <div class="navbar-user">
       <span class="user-name" id="navUserName"></span>
-      <button class="btn-logout" onclick="handleLogout()">Logout</button>
+      <button class="btn-logout" onclick="MMUAuth.logout('/staff/login/')">Logout</button>
     </div>
   </div>
 </nav>
@@ -39,7 +37,7 @@
 <div class="hero">
   <div class="container">
     <h1 id="heroTitle">Staff Dashboard</h1>
-    <p id="heroSub">Manage clearance requests for your department</p>
+    <p id="heroSub">Loading…</p>
   </div>
 </div>
 
@@ -48,130 +46,84 @@
     <div class="spinner" style="width:40px;height:40px;margin:0 auto 16px"></div>
     <p style="color:#777">Loading queue…</p>
   </div>
-
   <div id="mainContent" style="display:none">
-    <!-- Tabs -->
     <div class="tabs">
       <button class="tab-btn active" id="tab-PENDING"  onclick="setTab('PENDING')">Pending</button>
       <button class="tab-btn" id="tab-CLEARED" onclick="setTab('CLEARED')">Cleared</button>
       <button class="tab-btn" id="tab-REJECTED" onclick="setTab('REJECTED')">Rejected</button>
       <button class="tab-btn" id="tab-ALL"     onclick="setTab('ALL')">All</button>
     </div>
-
-    <div id="queueTable">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Reg Number</th>
-              <th>Student Name</th>
-              <th>Programme</th>
-              <th>Faculty</th>
-              <th>Submitted</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="queueBody">
-            <tr><td colspan="8" style="text-align:center;padding:30px;color:#aaa">Loading…</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Reg Number</th><th>Student Name</th><th>Programme</th><th>Faculty</th><th>Submitted</th><th>Status</th><th>Action</th></tr>
+        </thead>
+        <tbody id="queueBody"></tbody>
+      </table>
     </div>
   </div>
 </div>
 
 <script>
   const API = '/api';
-  let currentTab = 'PENDING';
-  let allQueue = [];
+  let allQueue = [], currentTab = 'PENDING';
+  const user = MMUAuth.user();
 
-  function getToken() { return localStorage.getItem('mmu_token'); }
-  function getUser()  { return JSON.parse(localStorage.getItem('mmu_user') || 'null'); }
-  function authHeaders() { return { 'Authorization': `Token ${getToken()}` }; }
+  document.getElementById('navUserName').textContent = user.name + ' (' + (user.department_code || user.department) + ')';
+  document.getElementById('heroTitle').textContent = user.department + ' — Clearance Queue';
+  document.getElementById('heroSub').textContent = 'Logged in as: ' + user.name + ' (' + user.staff_number + ')';
 
-  // Validate session on load
-  const _token = getToken();
-  const _user = getUser();
-  if (!_token || !_user || !_user.staff_number) {
-    localStorage.removeItem('mmu_token');
-    localStorage.removeItem('mmu_user');
-    window.location.href = '/staff/login/';
-  } else {
-    document.getElementById('navUserName').textContent = `${_user.name} (${_user.department_code || _user.department})`;
-    document.getElementById('heroTitle').textContent = `${_user.department} — Clearance Queue`;
-    document.getElementById('heroSub').textContent = `Logged in as: ${_user.name} (${_user.staff_number})`;
-  }
-
-  async function handleLogout() {
-    await fetch(`${API}/auth/logout/`, { method: 'POST', headers: authHeaders() }).catch(()=>{});
-    localStorage.removeItem('mmu_token');
-    localStorage.removeItem('mmu_user');
-    window.location.href = '/staff/login/';
-  }
-
-  function getBadgeClass(s) {
-    return { PENDING:'badge-pending', CLEARED:'badge-cleared', REJECTED:'badge-rejected' }[s] || 'badge-pending';
-  }
+  function getBadgeClass(s){return{PENDING:'badge-pending',CLEARED:'badge-cleared',REJECTED:'badge-rejected'}[s]||'badge-pending';}
 
   function setTab(tab) {
     currentTab = tab;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-${tab}`)?.classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    var el = document.getElementById('tab-'+tab);
+    if(el) el.classList.add('active');
     renderTable();
   }
 
   function renderTable() {
-    const filtered = currentTab === 'ALL'
-      ? allQueue
-      : allQueue.filter(q => q.status === currentTab);
-
-    const tbody = document.getElementById('queueBody');
+    var filtered = currentTab==='ALL' ? allQueue : allQueue.filter(q=>q.status===currentTab);
+    var tbody = document.getElementById('queueBody');
     if (!filtered.length) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#aaa">No ${currentTab.toLowerCase()} requests</td></tr>`;
+      tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:#aaa">No '+currentTab.toLowerCase()+' requests</td></tr>';
       return;
     }
-
-    tbody.innerHTML = filtered.map((q, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td><strong>${q.student?.reg_number || '—'}</strong></td>
-        <td>${q.student?.first_name || ''} ${q.student?.last_name || ''}</td>
-        <td>${q.student?.programme_name || '—'}</td>
-        <td>${q.student?.faculty_name || '—'}</td>
-        <td>${q.initiated_date ? new Date(q.initiated_date).toLocaleDateString('en-KE') : '—'}</td>
-        <td><span class="badge ${getBadgeClass(q.status)}">${q.status}</span></td>
-        <td>
-          <a href="/staff/action/${q.request_id}/"
-             class="btn btn-secondary btn-sm">
-            ${q.status === 'PENDING' ? '⚡ Review' : '👁 View'}
-          </a>
-        </td>
-      </tr>`).join('');
+    tbody.innerHTML = filtered.map(function(q,i){
+      var name = (q.student ? q.student.first_name+' '+q.student.last_name : '—');
+      var date = q.initiated_date ? new Date(q.initiated_date).toLocaleDateString('en-KE') : '—';
+      var isResubmit = q.remarks && q.remarks.indexOf('[RESUBMITTED]')===0;
+      var resubmitBadge = isResubmit ? ' <span style="background:#fff8e1;color:#b8860b;font-size:.7rem;padding:2px 7px;border-radius:10px;font-weight:700">RESUBMITTED</span>' : '';
+      return '<tr>'
+        +'<td>'+(i+1)+'</td>'
+        +'<td><strong>'+(q.student?q.student.reg_number:'—')+'</strong></td>'
+        +'<td>'+name+'</td>'
+        +'<td>'+(q.student?q.student.programme_name:'—')+'</td>'
+        +'<td>'+(q.student?q.student.faculty_name:'—')+'</td>'
+        +'<td>'+date+'</td>'
+        +'<td><span class="badge '+getBadgeClass(q.status)+'">'+q.status+'</span>'+resubmitBadge+'</td>'
+        +'<td><a href="/staff/action/'+q.request_id+'/" class="btn btn-secondary btn-sm">'
+        +(q.status==='PENDING'?'⚡ Review':'👁 View')+'</a></td>'
+        +'</tr>';
+    }).join('');
   }
 
   async function loadQueue() {
     try {
-      const res = await fetch(`${API}/staff/queue/`, { headers: authHeaders() });
-      if (res.status === 401) { window.location.href = '/staff/login/'; return; }
+      var res = await fetch(API+'/staff/queue/', {headers: MMUAuth.headers()});
+      if (res.status===401) { MMUAuth.clearSession(); window.location.replace('/staff/login/'); return; }
       allQueue = await res.json();
-
-      document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('mainContent').style.display = 'block';
-
-      // Update tab counts
-      const counts = { PENDING: 0, CLEARED: 0, REJECTED: 0, ALL: allQueue.length };
-      allQueue.forEach(q => { if (counts[q.status] !== undefined) counts[q.status]++; });
-      ['PENDING','CLEARED','REJECTED','ALL'].forEach(t => {
-        const el = document.getElementById(`tab-${t}`);
-        if (el) el.textContent = `${t.charAt(0)+t.slice(1).toLowerCase()} (${counts[t]})`;
+      document.getElementById('loadingState').style.display='none';
+      document.getElementById('mainContent').style.display='block';
+      var counts={PENDING:0,CLEARED:0,REJECTED:0,ALL:allQueue.length};
+      allQueue.forEach(function(q){if(counts[q.status]!==undefined)counts[q.status]++;});
+      ['PENDING','CLEARED','REJECTED','ALL'].forEach(function(t){
+        var el=document.getElementById('tab-'+t);
+        if(el) el.textContent=t.charAt(0)+t.slice(1).toLowerCase()+' ('+counts[t]+')';
       });
-
       renderTable();
-    } catch(e) {
-      console.error(e);
-    }
+    } catch(e) { console.error(e); }
   }
 
   loadQueue();

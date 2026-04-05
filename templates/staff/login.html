@@ -4,125 +4,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Staff Login — MMU Clearance System</title>
+  <title>Staff Login — MMU Clearance</title>
   <link rel="stylesheet" href="{% static 'css/mmu.css' %}">
   <style>
-    body { background: linear-gradient(160deg, #1B2A6B 0%, #0d1a4a 60%, #1a0a2e 100%); }
-    .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
-    .login-box { background:#fff; border-radius:16px; padding:44px 40px; width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
-    .login-logo { text-align:center; margin-bottom:24px; }
-    .login-logo img { height:75px; }
-    .login-title { text-align:center; font-size:1.35rem; font-weight:800; color:var(--mmu-navy); margin-bottom:4px; }
-    .login-subtitle { text-align:center; color:#aaa; font-size:0.82rem; margin-bottom:28px; }
-    .input-wrap { position:relative; margin-bottom:16px; }
-    .input-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:1rem; pointer-events:none; }
-    .input-wrap input { padding-left:42px; height:48px; border-radius:8px; font-size:0.9rem; width:100%; border:1px solid var(--mmu-border); color:var(--mmu-body); transition:border-color 0.15s,box-shadow 0.15s; box-sizing:border-box; }
-    .input-wrap input:focus { outline:none; border-color:var(--mmu-navy); box-shadow:0 0 0 3px rgba(27,42,107,0.1); }
-    .forgot-row { text-align:right; margin:-4px 0 16px; }
-    .forgot-row a { font-size:0.82rem; color:var(--mmu-navy); text-decoration:none; }
-    .forgot-row a:hover { color:var(--mmu-red); text-decoration:underline; }
-    .btn-login { width:100%; height:48px; background:var(--mmu-navy); color:#fff; border:none; border-radius:8px; font-size:0.95rem; font-weight:700; cursor:pointer; transition:background 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; }
-    .btn-login:hover { background:#0d1a4a; }
-    .student-row { text-align:center; margin-top:20px; font-size:0.82rem; color:#aaa; }
-    .student-row a { color:var(--mmu-red); font-weight:600; text-decoration:none; }
-    .student-row a:hover { text-decoration:underline; }
-    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center; z-index:999; opacity:0; pointer-events:none; transition:opacity 0.2s; }
-    .modal-overlay.open { opacity:1; pointer-events:all; }
-    .modal-box { background:#fff; border-radius:14px; padding:32px; max-width:400px; width:95%; box-shadow:0 8px 40px rgba(0,0,0,0.25); }
+    body{background:linear-gradient(160deg,#1B2A6B 0%,#0d1a4a 60%,#1a0a2e 100%);}
+    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .box{background:#fff;border-radius:16px;padding:44px 40px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+    .logo{text-align:center;margin-bottom:24px;}
+    .logo img{height:75px;}
+    .title{text-align:center;font-size:1.35rem;font-weight:800;color:var(--mmu-navy);margin-bottom:4px;}
+    .sub{text-align:center;color:#aaa;font-size:0.82rem;margin-bottom:28px;}
+    .inp{position:relative;margin-bottom:16px;}
+    .inp-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);pointer-events:none;}
+    .inp input{padding-left:42px;height:48px;border-radius:8px;font-size:0.9rem;width:100%;border:1px solid var(--mmu-border);box-sizing:border-box;transition:border-color .15s,box-shadow .15s;}
+    .inp input:focus{outline:none;border-color:var(--mmu-navy);box-shadow:0 0 0 3px rgba(27,42,107,.1);}
+    .forgot{text-align:right;margin:-4px 0 16px;font-size:.82rem;}
+    .forgot a{color:var(--mmu-navy);text-decoration:none;}
+    .forgot a:hover{color:var(--mmu-red);}
+    .btn-go{width:100%;height:48px;background:var(--mmu-navy);color:#fff;border:none;border-radius:8px;font-size:.95rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .btn-go:hover{background:#0d1a4a;}
+    .alt{text-align:center;margin-top:20px;font-size:.82rem;color:#aaa;}
+    .alt a{color:var(--mmu-red);font-weight:600;text-decoration:none;}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999;opacity:0;pointer-events:none;transition:opacity .2s;}
+    .modal-overlay.open{opacity:1;pointer-events:all;}
+    .modal-box{background:#fff;border-radius:14px;padding:32px;max-width:400px;width:95%;box-shadow:0 8px 40px rgba(0,0,0,.25);}
   </style>
 </head>
 <body>
-<div class="login-wrap">
-  <div class="login-box">
-    <div class="login-logo"><img src="{% static 'images/mmu_logo.png' %}" alt="MMU Logo"></div>
-    <div class="login-title">Staff Portal</div>
-    <div class="login-subtitle">MMU Student Clearance System</div>
-
-    <div id="errorAlert" class="alert alert-error" style="display:none;margin-bottom:16px"></div>
-
-    <div class="input-wrap">
-      <span class="input-icon">👤</span>
-      <input id="staffNumber" type="text" placeholder="Staff Number (e.g. LIB-001)" autocomplete="username">
+<script src="{% static 'js/auth.js' %}"></script>
+<script>
+  // Only redirect if ALREADY logged in as staff — do NOT redirect in a loop
+  (function(){
+    var token = localStorage.getItem('mmu_token');
+    var user = null;
+    try { user = JSON.parse(localStorage.getItem('mmu_user') || 'null'); } catch(e){}
+    if (token && user && user.staff_number) {
+      window.location.replace('/staff/dashboard/');
+    }
+  })();
+</script>
+<div class="wrap">
+  <div class="box">
+    <div class="logo"><img src="{% static 'images/mmu_logo.png' %}" alt="MMU"></div>
+    <div class="title">Staff Portal</div>
+    <div class="sub">MMU Student Clearance System</div>
+    <div id="err" class="alert alert-error" style="display:none;margin-bottom:16px"></div>
+    <div class="inp">
+      <span class="inp-icon">👤</span>
+      <input id="sn" type="text" placeholder="Staff Number (e.g. LIB-001)" autocomplete="username">
     </div>
-    <div class="input-wrap">
-      <span class="input-icon">🔒</span>
-      <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+    <div class="inp">
+      <span class="inp-icon">🔒</span>
+      <input id="pw" type="password" placeholder="Password" autocomplete="current-password">
     </div>
-    <div class="forgot-row"><a href="#" onclick="openForgot();return false">Forgot password?</a></div>
-    <button class="btn-login" id="loginBtn" onclick="doLogin()">Sign In</button>
-    <div class="student-row">Are you a student? <a href="/login/">Student Login →</a></div>
+    <div class="forgot"><a href="#" onclick="openForgot();return false">Forgot password?</a></div>
+    <button class="btn-go" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <div class="alt">Are you a student? <a href="/login/">Student Login →</a></div>
   </div>
 </div>
 
-<!-- Forgot Password Modal -->
 <div class="modal-overlay" id="forgotModal">
   <div class="modal-box">
-    <div style="font-size:1.05rem;font-weight:800;color:var(--mmu-navy);margin-bottom:6px">🔑 Reset Staff Password</div>
-    <div style="color:#888;font-size:0.83rem;line-height:1.6;margin-bottom:20px">Enter your staff email address and we'll send you a password reset link.</div>
-    <div id="forgotError" class="alert alert-error" style="display:none;margin-bottom:14px"></div>
-    <div id="forgotSuccess" class="alert alert-success" style="display:none;margin-bottom:14px"></div>
+    <div style="font-size:1.05rem;font-weight:800;color:var(--mmu-navy);margin-bottom:6px">🔑 Reset Password</div>
+    <div style="color:#888;font-size:.83rem;margin-bottom:20px">Enter your staff email and we'll send a temporary password.</div>
+    <div id="fErr" class="alert alert-error" style="display:none;margin-bottom:12px"></div>
+    <div id="fOk" class="alert alert-success" style="display:none;margin-bottom:12px"></div>
     <div style="margin-bottom:16px">
-      <label style="display:block;font-size:0.85rem;font-weight:600;color:var(--mmu-navy);margin-bottom:6px">Email Address</label>
-      <input id="forgotEmail" type="email" placeholder="your.email@mmu.ac.ke" style="width:100%;height:44px;padding:0 14px;border:1px solid var(--mmu-border);border-radius:8px;font-size:0.9rem;box-sizing:border-box">
+      <label style="display:block;font-size:.85rem;font-weight:600;color:var(--mmu-navy);margin-bottom:6px">Email Address</label>
+      <input id="fEmail" type="email" placeholder="your.email@mmu.ac.ke" style="width:100%;height:44px;padding:0 14px;border:1px solid var(--mmu-border);border-radius:8px;font-size:.9rem;box-sizing:border-box;">
     </div>
     <div style="display:flex;gap:10px">
       <button onclick="closeForgot()" style="flex:1;height:42px;background:transparent;border:2px solid var(--mmu-navy);color:var(--mmu-navy);border-radius:8px;font-weight:600;cursor:pointer">Cancel</button>
-      <button id="forgotBtn" onclick="doForgot()" style="flex:1;height:42px;background:var(--mmu-navy);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer">Send Reset Link</button>
+      <button id="fBtn" onclick="doForgot()" style="flex:1;height:42px;background:var(--mmu-navy);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer">Send Reset</button>
     </div>
   </div>
 </div>
 
 <script>
-  // Only redirect if we have both a token AND confirmed staff user
-  try {
-    const ex = JSON.parse(localStorage.getItem('mmu_user') || '{}');
-    const tk = localStorage.getItem('mmu_token');
-    if (tk && ex && ex.staff_number && ex.role) {
-      window.location.href = '/staff/dashboard/';
-    }
-  } catch(e) {
-    localStorage.removeItem('mmu_token');
-    localStorage.removeItem('mmu_user');
-  }
-  document.getElementById('password').addEventListener('keypress',e=>{ if(e.key==='Enter') doLogin(); });
-  document.getElementById('forgotEmail').addEventListener('keypress',e=>{ if(e.key==='Enter') doForgot(); });
+  document.getElementById('pw').addEventListener('keypress', e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById('fEmail').addEventListener('keypress', e => { if(e.key==='Enter') doForgot(); });
 
   async function doLogin() {
-    const btn=document.getElementById('loginBtn');
-    const sn=document.getElementById('staffNumber').value.trim();
-    const pw=document.getElementById('password').value;
-    document.getElementById('errorAlert').style.display='none';
-    if(!sn||!pw){showErr('Please enter your staff number and password.');return;}
-    btn.disabled=true; btn.innerHTML='<span class="spinner" style="width:18px;height:18px;border-width:2px"></span> Signing in…';
+    var btn = document.getElementById('loginBtn');
+    var sn = document.getElementById('sn').value.trim();
+    var pw = document.getElementById('pw').value;
+    document.getElementById('err').style.display = 'none';
+    if (!sn || !pw) { showErr('Please enter your staff number and password.'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px"></span> Signing in…';
     try {
-      const res=await fetch('/api/auth/staff/login/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({staff_number:sn,password:pw})});
-      const data=await res.json();
-      if(res.ok){localStorage.setItem('mmu_token',data.token);localStorage.setItem('mmu_user',JSON.stringify(data));window.location.href='/staff/dashboard/';}
-      else showErr(data.error||'Invalid credentials.');
-    } catch(e){showErr('Network error.');}
-    btn.disabled=false; btn.innerHTML='Sign In';
+      var res = await fetch('/api/auth/staff/login/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({staff_number: sn, password: pw})
+      });
+      var data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('mmu_token', data.token);
+        localStorage.setItem('mmu_user', JSON.stringify(data));
+        window.location.replace('/staff/dashboard/');
+      } else {
+        showErr(data.error || 'Invalid credentials.');
+      }
+    } catch(e) { showErr('Network error. Please try again.'); }
+    btn.disabled = false;
+    btn.innerHTML = 'Sign In';
   }
 
-  function showErr(msg){const el=document.getElementById('errorAlert');el.textContent=msg;el.style.display='block';}
-  function openForgot(){document.getElementById('forgotModal').classList.add('open');document.getElementById('forgotEmail').focus();}
-  function closeForgot(){
+  function showErr(msg) { var e=document.getElementById('err'); e.textContent=msg; e.style.display='block'; }
+  function openForgot() { document.getElementById('forgotModal').classList.add('open'); document.getElementById('fEmail').focus(); }
+  function closeForgot() {
     document.getElementById('forgotModal').classList.remove('open');
-    ['forgotError','forgotSuccess'].forEach(id=>document.getElementById(id).style.display='none');
-    document.getElementById('forgotEmail').value='';
+    document.getElementById('fErr').style.display='none';
+    document.getElementById('fOk').style.display='none';
+    document.getElementById('fEmail').value='';
   }
-  async function doForgot(){
-    const btn=document.getElementById('forgotBtn');
-    const email=document.getElementById('forgotEmail').value.trim();
-    ['forgotError','forgotSuccess'].forEach(id=>document.getElementById(id).style.display='none');
-    if(!email){document.getElementById('forgotError').textContent='Please enter your email address.';document.getElementById('forgotError').style.display='block';return;}
+  async function doForgot() {
+    var btn=document.getElementById('fBtn');
+    var email=document.getElementById('fEmail').value.trim();
+    document.getElementById('fErr').style.display='none';
+    document.getElementById('fOk').style.display='none';
+    if(!email){document.getElementById('fErr').textContent='Please enter your email.';document.getElementById('fErr').style.display='block';return;}
     btn.disabled=true; btn.textContent='Sending…';
     try {
-      const res=await fetch('/api/auth/staff/forgot-password/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
-      const data=await res.json();
-      if(res.ok){document.getElementById('forgotSuccess').textContent=data.message;document.getElementById('forgotSuccess').style.display='block';}
-      else{document.getElementById('forgotError').textContent=data.error||'Could not process request.';document.getElementById('forgotError').style.display='block';}
-    } catch(e){document.getElementById('forgotError').textContent='Network error.';document.getElementById('forgotError').style.display='block';}
-    btn.disabled=false; btn.textContent='Send Reset Link';
+      var res=await fetch('/api/auth/staff/forgot-password/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+      var data=await res.json();
+      if(res.ok){document.getElementById('fOk').textContent=data.message;document.getElementById('fOk').style.display='block';}
+      else{document.getElementById('fErr').textContent=data.error||'Failed.';document.getElementById('fErr').style.display='block';}
+    } catch(e){document.getElementById('fErr').textContent='Network error.';document.getElementById('fErr').style.display='block';}
+    btn.disabled=false; btn.textContent='Send Reset';
   }
   document.getElementById('forgotModal').addEventListener('click',function(e){if(e.target===this)closeForgot();});
 </script>

@@ -3,30 +3,44 @@ from django.conf import settings
 
 
 def send_request_submitted_email(student, clearance_request):
-    subject = "Clearance Request Submitted – MMU"
+    subject = "Clearance Request Received – MMU"
+    # Use personal_email if set, else fall back to student.email
+    recipient = getattr(clearance_request, 'personal_email', None) or student.email
     message = f"""Dear {student.full_name},
 
-Your clearance request has been successfully submitted to Multimedia University of Kenya.
+Thank you for submitting your clearance request. We are pleased to confirm that your request has been received by Multimedia University of Kenya and is now being processed.
 
-Details:
-- Registration Number: {student.reg_number}
-- Academic Year: {clearance_request.academic_year}
-- Request Date: {clearance_request.initiated_date}
+Your clearance details:
+  Registration Number : {student.reg_number}
+  Academic Year       : {clearance_request.academic_year}
+  Date Submitted      : {clearance_request.initiated_date}
 
-All 6 departments have been notified and will process your request simultaneously:
-• Library
-• Finance
-• Hostels
-• Faculty/School
-• ICT Services
-• Registry
+All 6 departments have been notified simultaneously and will work on your request as soon as possible:
+  ✓ Library
+  ✓ Finance
+  ✓ Hostels
+  ✓ Faculty/School
+  ✓ ICT Services
+  ✓ Registry
 
-You can track your clearance status in real-time at your student dashboard.
+You can track your real-time clearance status by logging into your student dashboard. You will receive a separate email notification whenever a department updates your status.
+
+If you have any queries, please contact the Clearance Office:
+  📞 +254 20 2071247
+  ✉️  clearance@mmu.ac.ke
 
 Best regards,
-MMU Clearance System
+MMU Clearance Office
 Multimedia University of Kenya
 """
+    return _send_and_log(
+        student=student,
+        clearance_request=clearance_request,
+        subject=subject,
+        message=message,
+        notif_type='REQUEST_SUBMITTED',
+        recipient_email=recipient,
+    )
     return _send_and_log(
         student=student,
         clearance_request=clearance_request,
@@ -133,16 +147,17 @@ Multimedia University of Kenya
     )
 
 
-def _send_and_log(student, clearance_request, subject, message, notif_type):
+def _send_and_log(student, clearance_request, subject, message, notif_type, recipient_email=None):
     """Send email and log to Notification table. Returns the Notification object."""
     from .models import Notification
+    email_to = recipient_email or student.email
     status = 'SENT'
     try:
         send_mail(
             subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[student.email],
+            recipient_list=[email_to],
             fail_silently=False,
         )
     except Exception as e:
