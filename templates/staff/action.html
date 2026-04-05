@@ -145,17 +145,34 @@
 
   async function loadRequest() {
     try {
+      var token = getToken();
+      if (!token) { window.location.href = '/staff/login/'; return; }
+
       var res = await fetch(API + '/staff/queue/' + requestId + '/', {
-        headers: { 'Authorization': 'Token ' + getToken() }
+        headers: { 'Authorization': 'Token ' + token }
       });
+
       if (res.status === 401) { window.location.href = '/staff/login/'; return; }
+
       if (!res.ok) {
-        document.getElementById('loadingState').innerHTML = '<p style="text-align:center;color:#aaa;padding:40px">Request not found or not your department.</p>';
+        var errData = {};
+        try { errData = await res.json(); } catch(e2) {}
+        document.getElementById('loadingState').innerHTML =
+          '<p style="text-align:center;color:#e44;padding:40px">' +
+          (errData.error || 'Request not found or not your department. (HTTP ' + res.status + ')') +
+          '<br><br><a href="/staff/dashboard/" class="btn btn-secondary btn-sm">← Back to Queue</a></p>';
         return;
       }
+
       var q = await res.json();
       renderRequest(q);
-    } catch(e) { console.error(e); }
+
+    } catch(e) {
+      console.error('loadRequest error:', e);
+      document.getElementById('loadingState').innerHTML =
+        '<p style="text-align:center;color:#e44;padding:40px">Network error: ' + e.message +
+        '<br><br><a href="/staff/dashboard/" class="btn btn-secondary btn-sm">← Back to Queue</a></p>';
+    }
   }
 
   function renderRequest(q) {

@@ -101,22 +101,28 @@ class LogoutView(BaseView):
 
 class StudentProfileView(BaseView):
     """GET /api/student/profile/"""
-    permission_classes = [IsStudent]
+    permission_classes = []
 
     def get(self, request):
-        return Response(StudentProfileSerializer(request.student).data)
+        student = getattr(request, 'student', None)
+        if not student:
+            return Response({'error': 'Authentication required.'}, status=401)
+        return Response(StudentProfileSerializer(student).data)
 
 
 class StudentClearanceStatusView(BaseView):
     """GET /api/student/clearance/status/"""
-    permission_classes = [IsStudent]
+    permission_classes = []
 
     def get(self, request):
+        student = getattr(request, 'student', None)
+        if not student:
+            return Response({'error': 'Authentication required.'}, status=401)
         try:
             clearance_req = ClearanceRequest.objects.prefetch_related(
                 'dept_statuses__department',
                 'dept_statuses__cleared_by'
-            ).get(student=request.student)
+            ).get(student=student)
             serializer = ClearanceStatusSerializer(clearance_req, context={'request': request})
             return Response(serializer.data)
         except ClearanceRequest.DoesNotExist:
@@ -125,10 +131,12 @@ class StudentClearanceStatusView(BaseView):
 
 class StudentClearanceSubmitView(BaseView):
     """POST /api/student/clearance/submit/"""
-    permission_classes = [IsStudent]
+    permission_classes = []
 
     def post(self, request):
-        student = request.student
+        student = getattr(request, 'student', None)
+        if not student:
+            return Response({'error': 'Authentication required.'}, status=401)
 
         # Check for existing request
         if ClearanceRequest.objects.filter(student=student).exists():
@@ -198,11 +206,14 @@ class StudentCertificateView(BaseView):
 
 class StudentNotificationsView(BaseView):
     """GET /api/student/notifications/"""
-    permission_classes = [IsStudent]
+    permission_classes = []
 
     def get(self, request):
+        student = getattr(request, 'student', None)
+        if not student:
+            return Response({'error': 'Authentication required.'}, status=401)
         notifications = Notification.objects.filter(
-            student=request.student
+            student=student
         ).order_by('-sent_at')
         serializer = NotificationSerializer(notifications, many=True)
         return Response(serializer.data)
@@ -212,12 +223,15 @@ class StudentNotificationsView(BaseView):
 
 class StaffQueueView(BaseView):
     """GET /api/staff/queue/"""
-    permission_classes = [IsStaff]
+    permission_classes = []
 
     def get(self, request):
+        staff = getattr(request, 'staff', None)
+        if not staff:
+            return Response({'error': 'Authentication required.'}, status=401)
         filter_status = request.query_params.get('status', None)
         qs = DeptClearanceStatus.objects.filter(
-            department=request.staff.department
+            department=staff.department
         ).select_related(
             'request__student__programme__faculty',
             'department', 'cleared_by'
@@ -232,16 +246,19 @@ class StaffQueueView(BaseView):
 
 class StaffQueueDetailView(BaseView):
     """GET /api/staff/queue/<request_id>/"""
-    permission_classes = [IsStaff]
+    permission_classes = []
 
     def get(self, request, request_id):
+        staff = getattr(request, 'staff', None)
+        if not staff:
+            return Response({'error': 'Authentication required.'}, status=401)
         try:
             dept_status = DeptClearanceStatus.objects.select_related(
                 'request__student__programme__faculty',
                 'department', 'cleared_by'
             ).get(
                 request_id=request_id,
-                department=request.staff.department
+                department=staff.department
             )
         except DeptClearanceStatus.DoesNotExist:
             return Response({'error': 'Not found.'}, status=404)
@@ -290,11 +307,14 @@ class StaffActionView(BaseView):
 
 class StaffHistoryView(BaseView):
     """GET /api/staff/history/"""
-    permission_classes = [IsStaff]
+    permission_classes = []
 
     def get(self, request):
+        staff = getattr(request, 'staff', None)
+        if not staff:
+            return Response({'error': 'Authentication required.'}, status=401)
         qs = DeptClearanceStatus.objects.filter(
-            cleared_by=request.staff
+            cleared_by=staff
         ).select_related(
             'request__student__programme__faculty',
             'department', 'cleared_by'
