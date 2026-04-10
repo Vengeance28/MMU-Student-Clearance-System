@@ -143,8 +143,9 @@
       +field('Faculty', q.student&&q.student.faculty_name)
       +field('Admission Year', q.student&&q.student.admission_year)
       +field('Academic Year', q.academic_year)
-      +field('Email', q.student&&q.student.email)
-      +field('Phone', q.student&&q.student.phone);
+      +field('Campus', q.campus||'—')
+      +field('Email', q.contact_email||'—')
+      +field('Phone', q.contact_phone||'—');
 
     // Show resubmission proof if present
     var isResubmit = q.remarks && q.remarks.indexOf('[RESUBMITTED]')===0;

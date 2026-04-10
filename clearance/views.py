@@ -154,12 +154,18 @@ class StudentClearanceSubmitView(BaseView):
             academic_year = f"{year - 1}/{year}"
 
         academic_year = request.data.get('academic_year', academic_year)
+        personal_email = request.data.get('personal_email', '').strip() or student.email
+        personal_phone = request.data.get('phone', '').strip() or student.phone or ''
+        campus = request.data.get('campus', 'Main Campus').strip()
 
         # Create clearance request
         clearance_req = ClearanceRequest.objects.create(
             student=student,
             academic_year=academic_year,
             overall_status='PENDING',
+            personal_email=personal_email,
+            personal_phone=personal_phone,
+            campus=campus,
         )
 
         # Bulk-create 6 dept_clearance_status rows (parallel processing — Objective ii)

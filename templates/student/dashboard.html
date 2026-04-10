@@ -105,7 +105,7 @@
 <div class="app-layout">
   <!-- Sidebar -->
   <div class="sidebar">
-    <a class="sidebar-item" href="/dashboard/" id="nav-dashboard">
+    <a class="sidebar-item" href="#" onclick="showTab('dashboard');return false" id="nav-dashboard">
       <span class="sidebar-icon">📊</span> Dashboard
     </a>
     <a class="sidebar-item active" href="#" onclick="showTab('clearance');return false" id="nav-clearance">
@@ -125,6 +125,18 @@
     <div id="loadingState" style="text-align:center;padding:60px 0">
       <div class="spinner" style="width:40px;height:40px;margin:0 auto 16px;border-width:3px"></div>
       <p style="color:#aaa">Loading…</p>
+    </div>
+
+    <!-- DASHBOARD TAB -->
+    <div id="tab-dashboard" style="display:none">
+      <div class="form-card">
+        <div class="form-card-header">📊 Dashboard</div>
+        <div class="form-card-body">
+          <div id="dashboardSummary">
+            <p style="color:#aaa;font-size:0.9rem">Loading summary…</p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- CLEARANCE TAB -->
@@ -285,11 +297,47 @@
   }
 
   function showTab(tab) {
-    ['clearance','notifications'].forEach(t => {
-      document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
-      document.getElementById('nav-'+t).classList.toggle('active', t===tab);
+    ['dashboard','clearance','notifications'].forEach(t => {
+      const tabEl = document.getElementById('tab-'+t);
+      const navEl = document.getElementById('nav-'+t);
+      if (tabEl) tabEl.style.display = t===tab ? 'block' : 'none';
+      if (navEl) navEl.classList.toggle('active', t===tab);
     });
     if (tab==='notifications') loadNotifTab();
+    if (tab==='dashboard') renderDashboardSummary();
+  }
+
+  function renderDashboardSummary() {
+    const el = document.getElementById('dashboardSummary');
+    if (!currentData) {
+      el.innerHTML = '<p style="color:#aaa;font-size:0.9rem">Submit your clearance request to see your dashboard summary.</p>';
+      return;
+    }
+    const depts = currentData.dept_statuses || [];
+    const cleared = depts.filter(d=>d.status==='CLEARED').length;
+    const rejected = depts.filter(d=>d.status==='REJECTED').length;
+    const pending = depts.filter(d=>d.status==='PENDING').length;
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
+        <div style="background:#f0fff4;border:1px solid #b7ebc8;border-radius:8px;padding:16px;text-align:center">
+          <div style="font-size:2rem;font-weight:800;color:var(--mmu-success)">${cleared}</div>
+          <div style="font-size:0.82rem;color:#555;margin-top:4px">Departments Cleared</div>
+        </div>
+        <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:16px;text-align:center">
+          <div style="font-size:2rem;font-weight:800;color:var(--mmu-pending)">${pending}</div>
+          <div style="font-size:0.82rem;color:#555;margin-top:4px">Pending Review</div>
+        </div>
+        <div style="background:#fff5f5;border:1px solid #ffcdd2;border-radius:8px;padding:16px;text-align:center">
+          <div style="font-size:2rem;font-weight:800;color:var(--mmu-danger)">${rejected}</div>
+          <div style="font-size:0.82rem;color:#555;margin-top:4px">Action Required</div>
+        </div>
+      </div>
+      <div style="font-size:0.88rem;color:#666;line-height:1.8">
+        <div><strong>Academic Year:</strong> ${currentData.academic_year||'—'}</div>
+        <div><strong>Submitted:</strong> ${currentData.initiated_date ? new Date(currentData.initiated_date).toLocaleDateString('en-KE',{dateStyle:'long'}) : '—'}</div>
+        <div><strong>Overall Status:</strong> <span style="font-weight:700;color:var(--mmu-navy)">${currentData.overall_status||'—'}</span></div>
+        ${currentData.overall_status==='COMPLETED' ? '<div style="margin-top:12px"><a href="/certificate/" class="btn btn-success">🎓 Download Clearance Certificate</a></div>' : ''}
+      </div>`;
   }
 
   const ICONS = {LIBRARY:'📚',FINANCE:'💰',HOSTELS:'🏠',FACULTY:'🎓',ICT:'💻',REGISTRY:'📋'};

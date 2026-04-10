@@ -137,6 +137,9 @@ class ClearanceRequest(models.Model):
     completed_date = models.DateField(null=True, blank=True)
     academic_year = models.CharField(max_length=12)
     overall_status = models.CharField(max_length=20, choices=OVERALL_STATUS_CHOICES, default='PENDING')
+    personal_email = models.EmailField(max_length=120, blank=True, null=True)
+    personal_phone = models.CharField(max_length=20, blank=True, null=True)
+    campus = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         db_table = 'clearance_request'

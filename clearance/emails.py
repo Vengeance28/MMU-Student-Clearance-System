@@ -74,12 +74,14 @@ Check your dashboard for the latest status.
 Best regards,
 MMU Clearance System
 """
+    recipient = getattr(clearance_request, 'personal_email', None) or student.email
     return _send_and_log(
         student=student,
         clearance_request=clearance_request,
         subject=subject,
         message=message,
         notif_type='DEPT_CLEARED',
+        recipient_email=recipient,
     )
 
 
@@ -103,12 +105,14 @@ Once you have resolved the issue, the department staff will update your clearanc
 Best regards,
 MMU Clearance System
 """
+    recipient = getattr(clearance_request, 'personal_email', None) or student.email
     return _send_and_log(
         student=student,
         clearance_request=clearance_request,
         subject=subject,
         message=message,
         notif_type='DEPT_REJECTED',
+        recipient_email=recipient,
     )
 
 
@@ -138,12 +142,14 @@ Best regards,
 MMU Clearance System
 Multimedia University of Kenya
 """
+    recipient = getattr(clearance_request, 'personal_email', None) or student.email
     return _send_and_log(
         student=student,
         clearance_request=clearance_request,
         subject=subject,
         message=message,
         notif_type='CLEARANCE_COMPLETE',
+        recipient_email=recipient,
     )
 
 

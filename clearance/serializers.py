@@ -91,6 +91,14 @@ class DeptClearanceStatusSerializer(serializers.ModelSerializer):
             return obj.cleared_by.full_name
         return None
 
+    def get_contact_email(self, obj):
+        # Prefer the email the student entered on the clearance form
+        return obj.request.personal_email or obj.request.student.email
+
+    def get_contact_phone(self, obj):
+        # Prefer the phone the student entered on the clearance form
+        return obj.request.personal_phone or obj.request.student.phone or '—'
+
     def get_document_url(self, obj):
         if obj.document:
             request = self.context.get('request')
@@ -150,6 +158,10 @@ class StaffQueueItemSerializer(serializers.ModelSerializer):
     request_id = serializers.IntegerField(source='request.id', read_only=True)
     academic_year = serializers.CharField(source='request.academic_year', read_only=True)
     initiated_date = serializers.DateField(source='request.initiated_date', read_only=True)
+    # Use the email/phone the student entered on the clearance form, not the database value
+    contact_email = serializers.SerializerMethodField()
+    contact_phone = serializers.SerializerMethodField()
+    campus = serializers.CharField(source='request.campus', read_only=True)
     cleared_by_name = serializers.SerializerMethodField()
     document_url = serializers.SerializerMethodField()
     library_record = serializers.SerializerMethodField()
@@ -162,7 +174,8 @@ class StaffQueueItemSerializer(serializers.ModelSerializer):
             'id', 'request_id', 'student', 'department_name',
             'status', 'remarks', 'document', 'document_url', 'updated_at',
             'cleared_by', 'cleared_by_name',
-            'academic_year', 'initiated_date',
+            'academic_year', 'initiated_date', 'campus',
+            'contact_email', 'contact_phone',
             'library_record', 'finance_record', 'hostel_record'
         ]
 
@@ -170,6 +183,14 @@ class StaffQueueItemSerializer(serializers.ModelSerializer):
         if obj.cleared_by:
             return obj.cleared_by.full_name
         return None
+
+    def get_contact_email(self, obj):
+        # Prefer the email the student entered on the clearance form
+        return obj.request.personal_email or obj.request.student.email
+
+    def get_contact_phone(self, obj):
+        # Prefer the phone the student entered on the clearance form
+        return obj.request.personal_phone or obj.request.student.phone or '—'
 
     def get_document_url(self, obj):
         if obj.document:
